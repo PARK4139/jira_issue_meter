@@ -23,7 +23,7 @@ demo.cmd
 
 Opens the dashboard with fictional data. No Jira login needed.
 
-![Dashboard](docs/quick-start/01-dashboard.png)
+<p align="center"><img src="docs/quick-start/01-dashboard.png" width="480" alt="Dashboard"></p>
 
 ## Quick start
 
@@ -37,23 +37,23 @@ run.cmd --url {Jira-server-url} --id {Jira-user-id}
 
 Enter your Jira password when prompted. The dashboard opens in your browser. Keep the terminal open; press **Ctrl+C** to stop.
 
-![Filter controls highlighted](docs/quick-start/03-filters-highlighted.png)
+<p align="center"><img src="docs/quick-start/03-filters-highlighted.png" width="480" alt="Filter controls highlighted"></p>
 
 ## Read the graphs
 
 Choose an output mode: **Cumulative**, **Non-cumulative**, or **Unresolved trend**. Choose **Separate graphs** or **Single graph** to compare selected projects together. In one graph, color identifies each project; dashed lines show Resolved. The guide below the graphs explains the selected mode.
 
-![Project autocomplete highlighted](docs/quick-start/04-project-autocomplete-highlighted.png)
+<p align="center"><img src="docs/quick-start/04-project-autocomplete-highlighted.png" width="480" alt="Project autocomplete highlighted"></p>
 
-![Quarterly trend](docs/quick-start/06-quarterly.png)
+<p align="center"><img src="docs/quick-start/06-quarterly.png" width="480" alt="Quarterly trend"></p>
 
-![Chart tooltip highlighted](docs/quick-start/07-tooltip-highlighted.png)
+<p align="center"><img src="docs/quick-start/07-tooltip-highlighted.png" width="480" alt="Chart tooltip highlighted"></p>
 
 ## Export
 
 Save report data as CSV or export the dashboard as JPG.
 
-![CSV and JPG export buttons highlighted](docs/quick-start/08-export-highlighted.png)
+<p align="center"><img src="docs/quick-start/08-export-highlighted.png" width="480" alt="CSV and JPG export buttons highlighted"></p>
 
 ## Security
 
