@@ -1,6 +1,6 @@
-# jira_issue_meter
+# Overview
 
-Local dashboard for Jira Server and Data Center issue trends.
+Local dashboard for Jira Server and Data Center issue trends by project and reporter.
 
 <!-- showreel:start -->
 ![10-second dashboard showreel](docs/showreel.gif)
