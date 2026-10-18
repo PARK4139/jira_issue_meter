@@ -1,6 +1,6 @@
 // Inputs live in localStorage and are mirrored to the git-ignored .local/inputs.json through the server, so they also
 // survive a restart on a different port (a new origin starts with an empty localStorage). localStorage wins when both exist.
-const SAVED_INPUTS=['year','projects','reporters','period','mode','locale','theme'];
+const SAVED_INPUTS=['year','projects','reporters','period','mode','chartLayout','locale','theme'];
 function preference(key,fallback){
 let value=null;
 try{value=localStorage.getItem('jira-'+key)}catch{}
@@ -41,7 +41,7 @@ function colorChart(){
 }
 function translateReport(){
  document.documentElement.lang=locale;document.documentElement.dataset.theme=theme;
- document.querySelectorAll('[data-text]').forEach(node=>node.textContent=t(node.dataset.text));
+ document.querySelectorAll('[data-text]').forEach(node=>node.textContent=node.dataset.text==='chartLayout'?(messages[locale].chartLayout||messages.en.chartLayout):t(node.dataset.text));
  for(const [id,key] of [['year','year'],['projects','projects'],['reporters','reporters']])byId(id+'-label').textContent=t(key);
  if(typeof showProjectCount==='function')showProjectCount();
  byId('download-csv').textContent=t('csv');byId('download-jpg').textContent=t('jpg');
@@ -59,6 +59,7 @@ function translateReport(){
  document.querySelectorAll('.legend span').forEach((node,i)=>node.textContent=t(i?'resolved':'created'));
  document.querySelector('svg').setAttribute('aria-label',t(calcMode==='unresolved'?'titleUnresolved':calcMode==='periodic'?'titlePeriodic':'title'));
  for(const option of [...(byId('calc-mode').options||[])])option.textContent=(messages[locale].modes[option.value]||option.textContent);
+ for(const option of [...byId('chart-layout').options])option.textContent=(messages[locale].chartLayouts||messages.en.chartLayouts)[option.value];
  document.querySelectorAll('svg title[data-period-field]').forEach(node=>node.textContent=node.dataset.periodStart+' / '+node.dataset.periodEnd+' '+t(node.dataset.periodField)+': '+Number(node.dataset.periodValue).toLocaleString(locale));
  document.querySelectorAll('svg title[data-cumulative-field]').forEach(node=>node.textContent=node.dataset.periodStart+' / '+node.dataset.periodEnd+' '+t('cumulative')+' '+t(node.dataset.cumulativeField)+': '+Number(node.dataset.cumulativeValue).toLocaleString(locale));
  byId('report-title').textContent=t('heading',{year:loadedFilters?loadedFilters.year:config.currentYear,period:activePeriod});document.title=byId('report-title').textContent;

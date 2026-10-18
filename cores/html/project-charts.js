@@ -1,8 +1,44 @@
+function renderSingleGraph(period,container){
+const projects=loadedProjectReports.map(project=>({project,rows:project.datasets[period],chartRows:calcMode==='periodic'?project.datasets[period]:cumulativeRows(project.datasets[period])})).filter(item=>item.rows?.length);
+if(!projects.length)return;
+const unresolvedMode=calcMode==='unresolved',fields=unresolvedMode?['unresolved']:['created','resolved'];
+const allValues=projects.flatMap(item=>item.chartRows.flatMap(row=>fields.map(field=>Number(row[field]||0))));
+const maxY=Math.max(4,Math.ceil(Math.max(1,...allValues)/4)*4),L=70,R=1037,T=35,B=320;
+const section=document.createElement('section');section.className='project-report single-graph';section.setAttribute('aria-label',t('singleGraphAria'));
+const heading=document.createElement('h3');heading.textContent=t('singleGraphHeading');section.append(heading);
+const legend=document.createElement('div');legend.className='single-graph-legend';
+const chart=document.createElementNS(ns,'svg');chart.setAttribute('viewBox','0 0 1060 410');chart.setAttribute('role','img');chart.setAttribute('aria-label',t('singleGraphAria')+' — '+titles[period]);
+const append=(tag,attrs,text)=>{const node=document.createElementNS(ns,tag);for(const [key,value] of Object.entries(attrs))node.setAttribute(key,value);if(text!==undefined)node.textContent=text;chart.append(node);return node};
+const x=(i,count)=>count===1?(L+R)/2:L+(R-L)*i/(count-1),y=value=>B-(B-T)*value/maxY;
+for(let i=0;i<=4;i++){const value=maxY*i/4;append('line',{x1:L,y1:y(value),x2:R,y2:y(value),stroke:'#34465e'});append('text',{x:52,y:y(value)+4,fill:'#a5b6cc','font-size':13,'text-anchor':'end'},value)}
+const labels=projects[0].rows;labels.forEach((row,i)=>{if(i%Math.max(1,Math.ceil(labels.length/12))===0||i===labels.length-1)append('text',{x:x(i,labels.length),y:350,fill:'#a5b6cc','font-size':12,'text-anchor':'end',transform:'rotate(-30 '+x(i,labels.length)+' 350)'},row.label)});
+const dots=[];
+projects.forEach(({project,rows,chartRows},projectIndex)=>{
+const color='hsl('+Math.round(projectIndex*137.508%360)+' 68% 48%)';
+for(const field of fields){const resolved=field==='resolved',metricLabel=unresolvedMode?t('unresolved'):t(field);
+const path=append('path',{d:chartRows.map((row,i)=>(i?'L':'M')+x(i,rows.length)+','+y(row[field]||0)).join(' '),stroke:color,'stroke-width':3,fill:'none',pathLength:1000,class:'series-line'+(resolved?' resolved-series':'')});if(resolved)path.style.setProperty('stroke-dasharray','8 5','important');
+const legendItem=document.createElement('span');legendItem.className='single-graph-legend-item';legendItem.style.setProperty('--series-color',color);legendItem.textContent=project.name+' ('+project.key+') · '+metricLabel;const swatch=document.createElement('i');swatch.setAttribute('aria-hidden','true');if(resolved)swatch.className='dashed';legendItem.prepend(swatch);legend.append(legendItem);
+chartRows.forEach((row,i)=>{const circle=append('circle',{cx:x(i,rows.length),cy:y(row[field]||0),r:rows.length>60?1.5:3.5,fill:color,class:'series-dot'});circle.style.setProperty('--i',String(i));(dots[i]??=[]).push(circle)})
+}
+});
+const guide=append('line',{x1:L,y1:T,x2:L,y2:B,class:'hover-line',stroke:'#94a6bd','stroke-width':1,visibility:'hidden'});
+const capture=append('rect',{x:L-8,y:T-12,width:R-L+16,height:B-T+12,fill:'transparent',class:'hover-capture'});
+const tip=document.createElement('div');tip.className='chart-tip';tip.hidden=true;tip.setAttribute('role','status');
+const hideHover=()=>{guide.setAttribute('visibility','hidden');dots.flat().forEach(circle=>circle.setAttribute('class','series-dot'));tip.hidden=true};
+const showHover=event=>{const box=chart.getBoundingClientRect(),host=section.getBoundingClientRect(),svgX=(event.clientX-box.left)*1060/(box.width||1060),count=labels.length,index=count===1?0:Math.max(0,Math.min(count-1,Math.round((svgX-L)/(R-L)*(count-1))));
+guide.setAttribute('x1',x(index,count));guide.setAttribute('x2',x(index,count));guide.setAttribute('visibility','visible');dots.flat().forEach(circle=>circle.setAttribute('class','series-dot hot'));tip.replaceChildren();
+const range=document.createElement('strong');range.textContent=labels[index].start+' ~ '+labels[index].end;tip.append(range);
+for(const {project,rows,chartRows} of projects){const name=document.createElement('span');name.className='tip-row';name.textContent=project.name+' ('+project.key+')';tip.append(name);for(const field of fields){const value=document.createElement('span');value.className='tip-row';const amount=field==='unresolved'?rows[index].unresolved:chartRows[index][field];value.textContent=(unresolvedMode?t('unresolved'):t(field))+': '+Number(amount||0).toLocaleString(locale);tip.append(value)}}
+tip.hidden=false;const width=tip.offsetWidth||0,left=event.clientX-host.left+16;tip.style.left=Math.max(8,left+width>host.width-8?event.clientX-host.left-16-width:left)+'px';tip.style.top=Math.max(8,event.clientY-host.top-12)+'px'};
+capture.addEventListener('pointermove',showHover);capture.addEventListener('pointerdown',showHover);capture.addEventListener('pointerleave',hideHover);capture.addEventListener('pointercancel',hideHover);
+section.append(legend,chart,tip);container.append(section)
+}
 const renderCombined=render;
 render=function(period){
 renderCombined(period);byId('summary').replaceChildren();byId('combined-chart').hidden=true;byId('combined-table').hidden=true;
 const container=byId('project-graphs');container.replaceChildren();
-for(const project of loadedProjectReports){
+if(chartLayout==='single')renderSingleGraph(period,container);
+else for(const project of loadedProjectReports){
 const rows=project.datasets[period],section=document.createElement('section');section.className='project-report';section.setAttribute('aria-label',project.name+' ('+project.key+')');
 const periodic=calcMode==='periodic',unresolvedMode=calcMode==='unresolved',chartRows=periodic?rows:cumulativeRows(rows);
 const heading=document.createElement('h3');heading.textContent=project.name+' ('+project.key+')';section.append(heading);

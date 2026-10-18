@@ -41,7 +41,7 @@ Enter your Jira password when prompted. The dashboard opens in your browser. Kee
 
 ## Read the graphs
 
-Choose an output mode: **Cumulative**, **Non-cumulative**, or **Unresolved trend**. The guide below the graphs explains the selected mode.
+Choose an output mode: **Cumulative**, **Non-cumulative**, or **Unresolved trend**. Choose **Separate graphs** or **Single graph** to compare selected projects together. In one graph, color identifies each project; dashed lines show Resolved. The guide below the graphs explains the selected mode.
 
 ![Project autocomplete highlighted](docs/quick-start/04-project-autocomplete-highlighted.png)
 
