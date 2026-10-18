@@ -1,4 +1,4 @@
-# ISSUE MEATER
+# jira_issue_meter
 
 Local dashboard for Jira Server and Data Center issue trends.
 
