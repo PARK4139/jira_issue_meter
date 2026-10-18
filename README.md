@@ -37,23 +37,23 @@ run.cmd --url {Jira-server-url} --id {Jira-user-id}
 
 Enter your Jira password when prompted. The dashboard opens in your browser. Keep the terminal open; press **Ctrl+C** to stop.
 
-![Project and reporter filters](docs/quick-start/03-filters.png)
+![Filter controls highlighted](docs/quick-start/03-filters-highlighted.png)
 
 ## Read the graphs
 
 Choose an output mode: **Cumulative**, **Non-cumulative**, or **Unresolved trend**. The guide below the graphs explains the selected mode.
 
-![Project autocomplete](docs/quick-start/04-project-autocomplete.png)
+![Project autocomplete highlighted](docs/quick-start/04-project-autocomplete-highlighted.png)
 
 ![Quarterly trend](docs/quick-start/06-quarterly.png)
 
-![Chart tooltip](docs/quick-start/07-tooltip.png)
+![Chart tooltip highlighted](docs/quick-start/07-tooltip-highlighted.png)
 
 ## Export
 
 Save report data as CSV or export the dashboard as JPG.
 
-![Export controls](docs/quick-start/08-export.png)
+![CSV and JPG export buttons highlighted](docs/quick-start/08-export-highlighted.png)
 
 ## Security
 
