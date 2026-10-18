@@ -1,87 +1,63 @@
-# Jira Custom Report
+# ISSUE MEATER
 
 Local dashboard for Jira Server and Data Center issue trends.
-
-See the [Quick Start Guide](QUICK_START.md) for screenshots.
 
 <!-- showreel:start -->
 ![10-second dashboard showreel](docs/showreel.gif)
 
-Terminal scene is reconstructed from `run.cmd` output. Dashboard scene uses fictional demo data. To rebuild: `node tests/capture_showreel.cjs`, then `uv run --no-project --with pillow python tests/build_showreel.py`.
+The terminal scene is reconstructed from real console messages. The dashboard uses dummy data.
 <!-- showreel:end -->
 
-## Start
+## Test environment
 
-Requirements: Windows, Git, and [uv](https://docs.astral.sh/uv/). Put `uv.exe` in `tools/` or add it to `PATH`.
-
-```bat
-run.cmd --url https://jira.example.com/jira --id myuser
-```
-
-Enter the Jira password in the terminal. The dashboard opens in your browser. Leave the terminal open. Press **Ctrl+C** to stop.
-
-Run without Jira:
-
-```bat
-demo.cmd
-```
-
-Demo uses fictional data. It needs no credentials and makes no Jira requests. See [Demo](#demo) for options.
-
-## Dashboard
-
-- Choose a year, projects, reporters, period, language, and theme.
-- Project and reporter fields have autocomplete. Queries start when filters are valid.
-- See combined totals and one graph per project.
-- The regular report loads issues created or resolved in the selected year, then counts daily, weekly, monthly, quarterly, and yearly totals from that result.
-- Choose **Cumulative** for year-to-date created and resolved lines, or **Non-cumulative** for created and resolved counts in each period.
-- Choose **Unresolved trend** to replay each candidate issue's paginated Jira changelog and count issues with an empty resolution at each period end. This includes issues whose resolution has never changed, avoiding the known omission in `resolution WAS EMPTY ON "date"`. Jira must allow access to issue changelogs. The candidate-search JQL and changelog-replay note appear in each period's data-proof table; request volume depends on the number of candidate issues and changelog pages.
-- Tables and CSV contain created/resolved period counts. CSV does not include unresolved snapshots.
-- Demo mode supplies deterministic synthetic unresolved snapshots and makes no Jira requests.
-- Export CSV or JPG to `outputs/`.
-- Filters and display preferences are saved locally in `.local/inputs.json` and browser storage.
+| Component | Version |
+|---|---|
+| Jira | JIRA Software Server 7.3 (on-premises) |
+| OS | Windows 11 Pro 25H2, 26200.9711, 1000.26100.372.0 |
 
 ## Demo
 
 ```bat
 demo.cmd
-demo.cmd --no-open
-demo.cmd --port 8765
 ```
 
-Demo has twelve fictional projects and eight fictional users. Data is repeatable for a year and project. Demo settings are stored separately in `.local/demo-inputs.json`.
+Opens the dashboard with fictional data. No Jira login needed.
 
-## Authentication and security
+![Dashboard](docs/quick-start/01-dashboard.png)
 
-The Jira server must allow Basic authentication. SSO-only deployments need a separate authentication integration. Both HTTP and HTTPS URLs are supported, including custom ports and context paths. HTTPS certificate verification and redirect blocking remain enabled. An HTTP URL prints a warning because HTTP does not encrypt credentials in transit.
+## Quick start
 
-The password stays in server memory and is sent only to the configured Jira server. It is not placed in browser content, command arguments, files, or logs. The dashboard binds to loopback, validates browser requests against the expected host, origin, and session token, and does not expose a general filesystem or Jira proxy.
-
-By default, enter the password at each launch. The optional **Auto login** control can save or remove the current Jira login in Windows Credential Manager after confirmation. When enabled, the saved login is used only for its associated Jira URL and user ID. Start with `--no-auto-login` to require a password for that launch.
-
-## Development
+Requires Windows, Git, and [uv](https://docs.astral.sh/uv/). Put `uv.exe` in `tools/` or add it to `PATH`.
 
 ```bat
-dev.cmd
-dev.cmd --no-open
-dev.cmd --port 8766
+git clone https://github.com/PARK4139/jira_issue_meter
+cd jira_issue_meter
+run.cmd --url {Jira-server-url} --id {Jira-user-id}
 ```
 
-`dev.cmd` uses demo data. HTML, CSS, or JavaScript edits reload the browser. Python edits under `cores/python/` restart the server. Default port is `8765`.
+Enter your Jira password when prompted. The dashboard opens in your browser. Keep the terminal open; press **Ctrl+C** to stop.
 
-## Tests
+![Project and reporter filters](docs/quick-start/03-filters.png)
 
-```bat
-uv run --locked python -m unittest discover -s tests -v
-```
+## Read the graphs
 
-Some browser checks also need Node and Chrome. Tests use synthetic Jira data.
+Choose an output mode: **Cumulative**, **Non-cumulative**, or **Unresolved trend**. The guide below the graphs explains the selected mode.
 
-## Files
+![Project autocomplete](docs/quick-start/04-project-autocomplete.png)
 
-- `cores/python/` — Python app and server.
-- `cores/html/` — HTML, CSS, and JavaScript.
-- `docs/` — showreel and screenshots.
-- `tests/` — unit and browser checks.
-- `outputs/` — generated reports; ignored by Git.
-- `.local/` — local settings and state; ignored by Git.
+![Quarterly trend](docs/quick-start/06-quarterly.png)
+
+![Chart tooltip](docs/quick-start/07-tooltip.png)
+
+## Export
+
+Save report data as CSV or export the dashboard as JPG.
+
+![Export controls](docs/quick-start/08-export.png)
+
+## Security
+
+- The dashboard listens on this PC only (`127.0.0.1`).
+- The Jira password stays in server memory and is not written to browser content, files, command arguments, or logs.
+- HTTP does not encrypt credentials in transit. Use HTTPS for the Jira URL when available.
+- Optional Auto login stores the Jira login in Windows Credential Manager after confirmation.
