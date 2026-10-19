@@ -24,7 +24,7 @@ class Element {
   checkValidity(){return true}
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
-async function launch(pagePath, initialStore) {
+async function launch(pagePath, initialStore, serverSaved) {
   const elements = new Map(), store = new Map(Object.entries(initialStore)), timers = new Map(), requests = [], inputSyncs = [];
   let timerId = 0, localStorageBroken = false;
   const document = {documentElement: new Element(), getElementById(id) { if (!elements.has(id)) { const node = new Element(); node.parentElement = new Element('label'); elements.set(id, node); } return elements.get(id); }, createElement: tag => new Element(tag), createElementNS: (ns, tag) => new Element(tag), querySelector(selector) { return this.getElementById(selector); }, querySelectorAll() { return []; }};
@@ -42,7 +42,9 @@ async function launch(pagePath, initialStore) {
       const projectReports = payload.projects.map(key => ({key, name: key, datasets}));
       return {ok: true, async json() { return {datasets, projectReports, queryCount: 1}; }};
     }});
-  vm.runInContext(fs.readFileSync(pagePath, 'utf8').match(/<script>([\s\S]*?)<\/script>/)[1], context);
+  let script=fs.readFileSync(pagePath, 'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+  if(serverSaved)script=script.replace(/const config=(.*?);\r?\n/,(_,raw)=>'const config='+JSON.stringify({...JSON.parse(raw),saved:serverSaved})+';\n');
+  vm.runInContext(script, context);
   const flush = async () => { const pending = [...timers.values()]; timers.clear(); for (const fn of pending) fn(); await settle(); };
   await settle(); await flush(); await flush();
   const chips = field => JSON.parse(vm.runInContext(`JSON.stringify(${field}Field.values)`, context));
@@ -93,6 +95,20 @@ async function main() {
   const e = await launch(withSaved, {});
   e.breakStorage();
   assert.deepEqual(e.chips('projects').map(chip => chip.value), ['OTHER']);
-  console.log('PASS: saved inputs restore after a restart, seed localStorage, defer to localStorage, mirror every change, and handle legacy and blocked storage.');
+  // Saved chip order must win over the Jira catalog and reporter search order.
+  const orderedProjects=['OTHER','DEMO'],orderedReporters=[{value:'kimsh',label:'kimsh'},{value:'parkjh',label:'parkjh'}];
+  const f=await launch(withoutSaved,{'jira-projects':JSON.stringify(orderedProjects),'jira-reporters':JSON.stringify(orderedReporters)});
+  const checkOrder=app=>{
+    assert.deepEqual(app.chips('projects').map(chip=>chip.value),orderedProjects);
+    assert.deepEqual(app.chips('reporters').map(chip=>chip.value),orderedReporters.map(chip=>chip.value));
+    assert.deepEqual(app.requests.at(-1).projects,orderedProjects);
+    assert.deepEqual(app.requests.at(-1).reporters,orderedReporters.map(chip=>chip.value));
+  };
+  checkOrder(f);
+  await vm.runInContext('loadProjects()',f.context);await f.flush();await f.flush();checkOrder(f);
+  const persisted=f.inputSyncs.at(-1);
+  assert.deepEqual(JSON.parse(persisted.projects),orderedProjects);
+  const g=await launch(withoutSaved,{},persisted);checkOrder(g);
+  console.log('PASS: saved inputs and chip order survive catalog refresh and restart, seed localStorage, mirror every change, and handle legacy and blocked storage.');
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

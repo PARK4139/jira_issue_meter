@@ -51,7 +51,9 @@ try{
 const response=await fetch('/api/projects',{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':config.session},body:'{}'});
 const result=await response.json();if(!response.ok)throw new Error(result.error||'Could not load projects.');
 projectCatalog=result.projects;
-showProjectCount();projectsField.set(projectCatalog.filter(project=>previous.includes(project.key)).map(projectItem));
+showProjectCount();
+const projectsByKey=new Map(projectCatalog.map(project=>[project.key,project]));
+projectsField.set(previous.map(key=>projectsByKey.get(key)).filter(Boolean).map(projectItem));
 select.disabled=projectCatalog.length===0;
 queryStatus(projectCatalog.length?'projectsReady':'projectsEmpty');
 }catch(error){projectsField.set([]);status.className='error';queryStatus('projectsFailed',{},error.message)}
