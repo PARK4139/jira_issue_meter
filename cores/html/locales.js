@@ -17,3 +17,7 @@ messages.en.titleRatio='Cumulative Resolved-to-Created Ratio';
 messages.ko.titleRatio='프로젝트별 누적 해결율 추이';
 messages.en.noteRatio='Chart: cumulative Resolved / Created. JQL proof tables show counts for each period.';
 messages.ko.noteRatio='그래프: 누적 해결 건수 / 누적 생성 건수. JQL 증빙 표는 기간별 건수입니다.';
+messages.en.guideRatioFormula='Resolved-to-Created Ratio = (cumulative resolved issues / cumulative created issues) × 100%.';
+messages.ko.guideRatioFormula='해결율 = (누적 해결 건수 ÷ 누적 생성 건수) × 100%.';
+messages.en.guideRatioInterpretation='A ratio of 100% is very good; 0% is very poor.';
+messages.ko.guideRatioInterpretation='해결율이 100%이면 매우 좋음, 0%이면 매우 나쁨입니다.';

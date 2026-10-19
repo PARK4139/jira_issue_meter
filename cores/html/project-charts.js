@@ -100,7 +100,7 @@ for(const row of rows){const tr=document.createElement('tr');for(const value of 
 }
 const guides=document.createElement('section');guides.className='chart-guides';guides.setAttribute('aria-labelledby','chart-guides-heading');
 const guideHeading=document.createElement('h3');guideHeading.id='chart-guides-heading';guideHeading.dataset.text='chartGuideHeading';guideHeading.textContent=t('chartGuideHeading');guides.append(guideHeading);
-const points=document.createElement('ul'),keys=unresolvedMode?['guideUnresolved1','guideUnresolved3']:chartLayout==='single'?['guideSingleRatio1','guideSingleRatio2']:periodic?['guidePeriodic1','guidePeriodic3']:['guideCumulative1','guideCumulative3'];
+const points=document.createElement('ul'),keys=unresolvedMode?['guideUnresolved1','guideUnresolved3']:chartLayout==='single'?['guideSingleRatio1','guideSingleRatio2']:['guideRatioFormula','guideRatioInterpretation'];
 for(const key of keys){const point=document.createElement('li');point.dataset.text=key;point.textContent=t(key);points.append(point)}
 guides.append(points);
 container.append(guides);
