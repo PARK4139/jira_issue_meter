@@ -76,7 +76,7 @@ if(!shown.length){const hint=emptyText(query);if(hint){const item=document.creat
 list.hidden=!shown.length&&!list.children.length;
 input.setAttribute('aria-expanded',String(!list.hidden&&shown.length>0));
 }
-function refresh(){
+function refresh(immediate=false){
 const token=input.value.trim(),run=++generation;
 clearTimeout(timer);
 const run_=async()=>{
@@ -85,7 +85,7 @@ if(run!==generation)return;
 shown=rankCandidates(token,candidates.filter(candidate=>!chips.some(chip=>same(chip.value,candidate.value))),limit);
 active=0;render(token);
 };
-if(delay>0)timer=setTimeout(run_,delay);else run_();
+if(delay>0&&!immediate)timer=setTimeout(run_,delay);else run_();
 }
 function pick(index){
 const choice=shown[index];if(!choice)return;
@@ -109,8 +109,8 @@ if(!shown.length)return;
 active=(active+step+shown.length)%shown.length;navigated=true;
 [...list.children].forEach((item,index)=>{item.className=index===active?'active':'';item.setAttribute('aria-selected',String(index===active));if(index===active&&item.scrollIntoView)item.scrollIntoView({block:'nearest'})});
 }
-input.addEventListener('focus',refresh);
-input.addEventListener('click',refresh);
+input.addEventListener('focus',()=>refresh(true));
+input.addEventListener('click',()=>refresh(true));
 input.addEventListener('input',()=>{
 navigated=false;
 if(COMBO_SEPARATOR.test(input.value)){
@@ -122,10 +122,10 @@ refresh();
 input.addEventListener('blur',()=>{commitPending();close()});
 input.addEventListener('keydown',event=>{
 const open=!list.hidden&&shown.length>0,token=input.value.trim();
-if((event.ctrlKey||event.metaKey)&&(event.key===' '||event.code==='Space')){event.preventDefault();if(open)pick(active);else{navigated=false;refresh()}}
-else if(event.key==='ArrowDown'){if(open){event.preventDefault();move(1)}else refresh()}
+if((event.ctrlKey||event.metaKey)&&(event.key===' '||event.code==='Space')){event.preventDefault();if(open)pick(active);else{navigated=false;refresh(true)}}
+else if(event.key==='ArrowDown'){if(open){event.preventDefault();move(1)}else refresh(true)}
 else if(event.key==='ArrowUp'){if(open){event.preventDefault();move(-1)}}
-else if(event.key==='Tab'&&!event.shiftKey&&open&&(token||navigated)){event.preventDefault();pick(active)}
+else if(event.key==='Tab'&&!event.shiftKey&&open){event.preventDefault();pick(active)}
 else if(event.key==='Enter'&&open&&navigated){event.preventDefault();pick(active)}
 else if(event.key==='Enter'&&token){event.preventDefault();commitPending();close()}
 else if(event.key==='Backspace'&&!input.value&&chips.length){removeChip(chips.at(-1).value);refresh()}

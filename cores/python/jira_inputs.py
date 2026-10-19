@@ -40,7 +40,7 @@ def _list_of_names(value: str) -> bool:
 VALIDATORS = {
     "year": lambda value: re.fullmatch(r"\d{4}", value) is not None,
     "period": lambda value: value in PERIODS,
-    "mode": lambda value: value in ("cumulative", "periodic"),
+    "mode": lambda value: value in ("cumulative", "periodic", "unresolved"),
     "chartLayout": lambda value: value in ("projects", "single"),
     "locale": lambda value: value in ("ko", "en"),
     "theme": lambda value: value in ("light", "dark"),
