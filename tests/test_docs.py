@@ -30,7 +30,7 @@ class QuickStartTests(unittest.TestCase):
         self.assertTrue((ROOT / "run.cmd").is_file() and (ROOT / "demo.cmd").is_file())
         import jira_dashboard_cli
         import inspect
-        source = inspect.getsource(jira_dashboard_cli.main)
+        source = inspect.getsource(jira_dashboard_cli.parse_args)
         for option in re.findall(r"^\| `(--[a-z-]+)", GUIDE, re.M):
             with self.subTest(option=option):
                 self.assertIn(f"'{option}'", source)

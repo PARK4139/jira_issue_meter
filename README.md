@@ -42,10 +42,18 @@ Enter your Jira password when prompted. The dashboard opens in your browser. Kee
 On the host PC at `172.20.13.185`, start the shared dashboard with:
 
 ```bat
-share.cmd --url {Jira-server-url} --id {Jira-user-id}
+run.cmd --url {Jira-server-url} --id {Jira-user-id}
 ```
 
 Open **http://172.20.13.185:9998/issue-meter/** from another PC on the network. Port 9999 remains available for TC review. LAN visitors query Jira through the account used to launch this server.
+
+To use the dashboard only on this PC, run:
+
+```bat
+run.cmd --local --url {Jira-server-url} --id {Jira-user-id}
+```
+
+Local mode uses `127.0.0.1`, an automatically allocated port, and `/`. Explicit `--port` and `--base-path` values override these defaults.
 
 For a different address or port, use:
 
@@ -73,7 +81,7 @@ Save report data as CSV or export the dashboard as JPG.
 
 ## Security
 
-- By default the dashboard listens on `127.0.0.1`. Use `share.cmd` or `--bind` with a concrete LAN address to share it on the network.
+- `run.cmd` shares the dashboard on `172.20.13.185:9998/issue-meter/` by default. Use `run.cmd --local` to listen only on `127.0.0.1`.
 - The Jira password stays in server memory and is not written to browser content, files, command arguments, or logs.
 - HTTP does not encrypt credentials in transit. Use HTTPS for the Jira URL when available.
 - Optional Auto login stores the Jira login in Windows Credential Manager after confirmation.

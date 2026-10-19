@@ -28,7 +28,7 @@ def open_browser(url):
         return False
 
 
-def main():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(description='On-premises Jira web dashboard')
     parser.add_argument('--url', '--site-url', dest='url', help='Jira server base URL (http:// or https://)')
     parser.add_argument('--allow-insecure-http', action='store_true',
@@ -37,20 +37,31 @@ def main():
     parser.add_argument('--project', nargs='+', help='Initial project keys; editable in the browser')
     parser.add_argument('--reporter', nargs='+', help='Initial reporter IDs; editable in the browser')
     parser.add_argument('--profile', default='default', help='Read existing nonsecret defaults')
-    parser.add_argument('--port', type=int, default=0, help='Local port (default: automatically allocated)')
-    parser.add_argument('--bind', '--host', default='127.0.0.1', help='IPv4 address to listen on; use this PC\'s LAN address for shared access')
-    parser.add_argument('--base-path', default='/', help='Dashboard path, for example /issue-meter/')
+    parser.add_argument('--local', action='store_true', help='Listen only on this PC, with an automatically allocated port and root path by default')
+    parser.add_argument('--port', type=int, help='Listen port (default: 9998; --local: automatically allocated)')
+    parser.add_argument('--bind', '--host', help='IPv4 address to listen on (default: 172.20.13.185; --local: 127.0.0.1)')
+    parser.add_argument('--base-path', help='Dashboard path (default: /issue-meter/; --local: /)')
     parser.add_argument('--no-open', action='store_true', help='Print the dashboard URL without opening a browser')
     parser.add_argument('--hot-reload', action='store_true', help='Reload the browser when dashboard HTML, CSS, or JavaScript assets change')
     parser.add_argument('--no-auto-login', action='store_true', help='Ask for the password even if Auto login is on (it stays on)')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    args.bind = args.bind if args.bind is not None else ('127.0.0.1' if args.local else '172.20.13.185')
+    args.port = args.port if args.port is not None else (0 if args.local else 9998)
+    args.base_path = args.base_path if args.base_path is not None else ('/' if args.local else '/issue-meter/')
     if not 0 <= args.port <= 65535:
         parser.error('port must be between 0 and 65535')
     try:
         args.bind = validate_bind_address(args.bind)
         args.base_path = normalize_base_path(args.base_path)
+        if args.local and not args.bind.startswith('127.'):
+            raise ValueError('--local requires a loopback bind address.')
     except ValueError as error:
         parser.error(str(error))
+    return args
+
+
+def main():
+    args = parse_args()
     saved = load_settings(args.profile, allow_insecure_http=True)
     autologin = WindowsAutoLogin(args.profile)
     url, user_id = args.url or (saved.site_url if saved else None), args.user_id or (saved.email if saved else None)
