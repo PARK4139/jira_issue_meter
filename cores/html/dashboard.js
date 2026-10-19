@@ -67,6 +67,13 @@ if(typeof setStatus==='function'){setStatus(key,values,error);return}
 status.textContent=key==='loading'||key==='done'?'':key==='failed'?'Jira query failed. '+error:'Choose a project and enter reporters to load results automatically.';
 }
 function scheduleReport(){queryGeneration++;invalidateReport();clearTimeout(queryTimer);queryTimer=setTimeout(loadReport,250)}
+function showUnresolvedLoading(){
+const panel=byId('report-panel'),loading=document.createElement('section');loading.className='project-report';
+const message=document.createElement('p');message.textContent=t('loadingHistory');message.setAttribute('role','status');loading.append(message);
+byId('project-graphs').replaceChildren(loading);byId('combined-chart').hidden=true;byId('combined-table').hidden=true;
+byId('period-heading').textContent=t('titleUnresolved');byId('period-controls').hidden=false;
+panel.hidden=false;panel.setAttribute('aria-busy','true');
+}
 async function loadReport(){
 if(queryRunning){queuedQuery=true;return}
 const generation=queryGeneration;
@@ -77,6 +84,7 @@ const displayNames=projects.map(key=>{const project=projectCatalog.find(project=
 queryRunning=true;
 remember('year',String(year));remember('projects',JSON.stringify(projects));remember('reporters',JSON.stringify(reportersField.values));remember('period',activePeriod);remember('mode',calcMode);
 status.className='';queryStatus('loading',{year});invalidateReport();
+if(calcMode==='unresolved')showUnresolvedLoading();
 try{
 const response=await fetch('/api/report',{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':config.session},body:JSON.stringify({year,projects,reporters,period:activePeriod,includeUnresolved:calcMode==='unresolved'})});
 const result=await response.json();if(generation!==queryGeneration)return;if(!response.ok)throw new Error(result.error||'Query failed.');
@@ -86,7 +94,7 @@ const selectedYear=byId('selected-year');if(selectedYear)selectedYear.textConten
 render(activePeriod);byId('report-panel').hidden=false;byId('period-note').hidden=false;byId('period-controls').hidden=false;
 queryStatus('done',{year,count:result.queryCount,projects:projects.length});hasResults=true;
 }catch(error){if(generation===queryGeneration){invalidateReport();status.className='error';queryStatus('failed',{},error.message)}}
-finally{queryRunning=false;if(queuedQuery||generation!==queryGeneration){queuedQuery=false;clearTimeout(queryTimer);queryTimer=setTimeout(loadReport,0)}}
+finally{queryRunning=false;byId('report-panel').setAttribute('aria-busy','false');if(queuedQuery||generation!==queryGeneration){queuedQuery=false;clearTimeout(queryTimer);queryTimer=setTimeout(loadReport,0)}}
 }
 form.addEventListener('submit',event=>{event.preventDefault();scheduleReport()});
 yearSelect.addEventListener('change',()=>{remember('year',yearSelect.value);scheduleReport()});
@@ -141,6 +149,7 @@ byId('chart-layout').addEventListener('change',()=>{chartLayout=byId('chart-layo
 byId('calc-mode').addEventListener('change',()=>{calcMode=['periodic','unresolved'].includes(byId('calc-mode').value)?byId('calc-mode').value:'cumulative';remember('mode',calcMode);if(hasResults&&calcMode!=='unresolved')render(activePeriod);else scheduleReport()});
 byId('period-select').addEventListener('change',()=>{activePeriod=byId('period-select').value;remember('period',activePeriod);if(hasResults&&calcMode!=='unresolved')render(activePeriod);else scheduleReport()});
 byId('download-csv').addEventListener('click',async()=>{
+if(!hasResults||queryRunning)return;
 const rows=[['project_key','project_name','period','start','end','created','resolved']];
 for(const project of loadedProjectReports)for(const [period,values] of Object.entries(project.datasets))for(const row of values)rows.push([project.key,project.name,period,row.start,row.end,row.created,row.resolved]);
 const cell=value=>{let text=String(value);if(/^[=+@\-\t\r]/.test(text))text="'"+text;return '"'+text.replaceAll('"','""')+'"'};

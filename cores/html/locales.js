@@ -21,3 +21,5 @@ messages.en.guideRatioFormula='Resolved-to-Created Ratio = (cumulative resolved 
 messages.ko.guideRatioFormula='해결율 = (누적 해결 건수 ÷ 누적 생성 건수) × 100%.';
 messages.en.guideRatioInterpretation='A ratio of 100% is very good; 0% is very poor.';
 messages.ko.guideRatioInterpretation='해결율이 100%이면 매우 좋음, 0%이면 매우 나쁨입니다.';
+messages.en.loadingHistory='Loading unresolved issue history. This may take some time for many issues.';
+messages.ko.loadingHistory='미해결 이력을 집계하고 있습니다. 이슈 수에 따라 시간이 걸릴 수 있습니다.';

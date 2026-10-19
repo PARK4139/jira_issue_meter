@@ -208,6 +208,18 @@ async function main() {
     assert.deepEqual(missingRatios.values.map(n=>n.text),['50.0%','0.0%','\u2014','\u2014']);
     assert.ok(missingRatios.values.slice(1).every((n,i)=>n.y>missingRatios.values[i].y),'missing ratios appear below zero, with separated labels');
 
+    // Unresolved mode displays progress, then counts and the correct JQL columns in both layouts.
+    await evaluate("(()=>{const input=document.getElementById('calc-mode');input.value='unresolved';input.dispatchEvent(new Event('change'));return true})()");
+    await waitFor(()=>evaluate("queryRunning && document.getElementById('report-panel').getAttribute('aria-busy')==='true'"),'visible history loading state');
+    assert.equal(await evaluate("document.getElementById('report-panel').hidden || document.getElementById('period-controls').hidden"),false);
+    await waitFor(()=>evaluate("!queryRunning && hasResults && !!document.querySelector('.single-graph svg')"),'unresolved combined graph');
+    assert.deepEqual(await evaluate("[...document.querySelectorAll('.single-graph text[data-series][text-anchor=\"end\"]')].map(n=>n.textContent)"),['4','4']);
+    assert.deepEqual(await evaluate("[...document.querySelector('.single-graph table').querySelectorAll('th')].map(n=>n.textContent)"),['Period [start, end)','Created','Resolved','Unresolved','JQL']);
+    await evaluate("(()=>{const input=document.getElementById('chart-layout');input.value='projects';input.dispatchEvent(new Event('change'));return true})()");
+    assert.equal(await evaluate("document.querySelectorAll('.project-report svg path').length"),2);
+    assert.equal(await evaluate("[...document.querySelectorAll('.project-report table')].every(table=>table.querySelectorAll('th').length===5)"),true);
+    await evaluate("(()=>{for(const [id,value] of [['calc-mode','periodic'],['chart-layout','single']]){const input=document.getElementById(id);input.value=value;input.dispatchEvent(new Event('change'))}return true})()");
+
     // Persistence: every input is mirrored to the git-ignored file, and a restart on another port (new origin, empty localStorage) restores it.
     await waitFor(async () => { try { const saved = JSON.parse(await fs.readFile(inputsFile, 'utf8')); return saved.projects === '["HTG","OTHER"]' && JSON.parse(saved.reporters).length === 2; } catch { return false; } }, 'inputs saved to disk');
     const saved = JSON.parse(await fs.readFile(inputsFile, 'utf8'));

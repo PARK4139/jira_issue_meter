@@ -224,6 +224,28 @@ class FastAggregationTests(unittest.TestCase):
         self.assertEqual([event for _, event in calls],
                          ['issue_search', 'issue_changelog', 'issue_changelog_expand'])
 
+    def test_unsupported_history_endpoint_is_not_retried_for_every_issue(self):
+        issues = [{'id': str(i), 'fields': {'project': {'key': 'DEMO'},
+                                          'created': '2026-01-01T00:00:00.000+0900',
+                                          'resolution': None}} for i in (42, 43)]
+        calls = []
+
+        def jira(request, event, expected_type=dict):
+            calls.append(event)
+            if event == 'issue_search':
+                return {'startAt': 0, 'maxResults': 1000, 'total': 2, 'issues': issues}
+            if event == 'issue_changelog':
+                raise RuntimeError('Jira HTTP 404: Request rejected')
+            return {'changelog': {'total': 0, 'histories': []}}
+
+        with patch.object(search, 'request_json', side_effect=jira), patch.object(search, 'MAX_WORKERS', 1):
+            grouped, request_count = search.count_unresolved_at_period_ends(
+                ['DEMO'], 2026, ['sample'], self.credentials, 'monthly')
+        self.assertEqual(grouped['DEMO'][0]['unresolved'], 2)
+        self.assertEqual(calls.count('issue_changelog'), 1)
+        self.assertEqual(calls.count('issue_changelog_expand'), 2)
+        self.assertEqual(request_count, 4)
+
     def test_incomplete_expanded_changelog_fails_without_partial_counts(self):
         issue = {'id': '42', 'fields': {'project': {'key': 'DEMO'},
                                         'created': '2026-01-01T00:00:00.000+0900',

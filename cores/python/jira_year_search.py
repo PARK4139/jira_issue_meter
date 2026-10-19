@@ -6,6 +6,7 @@ from bisect import bisect_right
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 import json
+from threading import Event
 from urllib.request import Request
 
 from jira_audit import record_event
@@ -127,14 +128,19 @@ def count_unresolved_at_period_ends(projects: list[str], year: int, reporters: l
         raise RuntimeError("Jira results changed during the history query. Retry the report.")
     base = validate_url(url=credentials.url, allow_insecure_http=credentials.allow_insecure_http)
     auth = base64.b64encode(f"{credentials.email}:{credentials.token}".encode()).decode()
+    standalone_unavailable = Event()
     def history_page(identity, start_at, count):
         endpoint = f"{base}/rest/api/2/issue/{identity}/changelog?startAt={start_at}&maxResults={count}"
         request = Request(endpoint, headers={"Authorization": f"Basic {auth}", "Accept": "application/json"})
-        try:
-            return request_json(request=request, event="issue_changelog"), 1
-        except RuntimeError as exc:
-            if "Jira HTTP 404:" not in str(exc):
-                raise
+        sent = 0
+        if not standalone_unavailable.is_set():
+            sent += 1
+            try:
+                return request_json(request=request, event="issue_changelog"), sent
+            except RuntimeError as exc:
+                if "Jira HTTP 404:" not in str(exc):
+                    raise
+                standalone_unavailable.set()
         # Jira Server 7.3 has changelog expansion on GET issue but does not
         # expose the newer standalone issue/{id}/changelog endpoint.
         endpoint = f"{base}/rest/api/2/issue/{identity}?fields=project,created,resolution&expand=changelog"
@@ -149,7 +155,7 @@ def count_unresolved_at_period_ends(projects: list[str], year: int, reporters: l
             raise RuntimeError("Jira expanded changelog response has an invalid shape.")
         if start_at + len(histories) < total_changes:
             raise RuntimeError("Jira Server returned an incomplete expanded changelog; update Jira or reduce the issue history.")
-        return {"histories": histories, "total": total_changes}, 2
+        return {"histories": histories, "total": total_changes}, sent + 1
 
     def histories(issue):
         identity = issue.get("id")

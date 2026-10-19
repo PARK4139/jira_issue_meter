@@ -7,6 +7,8 @@ import jira_dashboard_server
 import jira_inputs
 from jira_web import DashboardServer
 from pathlib import Path
+from jira_periods import period_ranges
+import time
 
 
 USERS = [{"name": "sample", "displayName": "Sample User"}, {"name": "fail", "displayName": "Fail User"},
@@ -33,6 +35,12 @@ def collect(projects, year, reporters, credentials):
     return records, 1
 
 
+def unresolved_snapshots(projects, year, reporters, credentials, period):
+    time.sleep(.5)  # Exercise the visible loading state before a history response arrives.
+    return {project: [dict(row, unresolved=index+1, queries={'unresolved':'synthetic unresolved query'})
+                      for index, row in enumerate(period_ranges(year, period))] for project in projects}, 1
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=0)
@@ -41,6 +49,7 @@ if __name__ == "__main__":
     inputs_file = Path('.local/ui-verification/fixture-inputs.json').resolve()
     with patch.object(jira_inputs, "F_INPUTS", inputs_file), patch("jira_dashboard_server.D_OUTPUTS", output_dir), patch("jira_dashboard_server.reveal_output"), patch(
             "jira_dashboard_service.fetch_year_issues", side_effect=collect), patch(
+            "jira_dashboard_service.count_unresolved_at_period_ends", side_effect=unresolved_snapshots), patch(
             "jira_dashboard_server.fetch_projects", return_value=[
                 {"key": "DEMO", "name": "Demo team"}, {"key": "HTG", "name": "Hotel group"},
                 {"key": "OTHER", "name": "Platform team"}]), patch(
