@@ -71,6 +71,24 @@ class RestartTests(unittest.TestCase):
                 self.assertIsNone(lifecycle.stop_previous())
                 opener.assert_not_called()
 
+    def test_prefixed_server_state_supports_authenticated_restart(self):
+        server = DashboardServer(self.creds, [], [], base_path='/issue-meter/')
+        thread = threading.Thread(target=lambda: server.serve_forever(poll_interval=.01), daemon=True)
+        thread.start()
+        state = {'application': 'jira-custom-report', 'workspace': str(jira_paths.D_PROJECT.resolve()),
+                 'port': server.server_port, 'session': server.session,
+                 'bind': server.bind_address, 'base_path': server.base_path}
+        lifecycle.state_path().write_text(json.dumps(state), encoding='utf-8')
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(lifecycle.stop_previous(), server.server_port)
+            thread.join(timeout=2)
+            self.assertFalse(thread.is_alive())
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
     @unittest.skipUnless(os.name == 'nt', 'Legacy process discovery uses Windows CIM')
     def test_legacy_cleanup_stops_only_the_exact_workspace_launcher(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -11,6 +11,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import ProxyHandler, Request, build_opener
 
 import jira_paths
+from jira_dashboard_server import normalize_base_path, validate_bind_address
 
 
 def state_path():
@@ -60,8 +61,10 @@ def read_state():
                 or not isinstance(value.get('session'), str)
                 or not re.fullmatch(r'[A-Za-z0-9_-]{32,128}', value['session'])):
             return None
+        value['bind'] = validate_bind_address(value.get('bind', '127.0.0.1'))
+        value['base_path'] = normalize_base_path(value.get('base_path', '/'))
         return value
-    except (OSError, ValueError, AttributeError):
+    except (OSError, ValueError, AttributeError, TypeError):
         return None
 
 
@@ -69,8 +72,8 @@ def stop_previous():
     state = read_state()
     if state is None:
         return None
-    origin = f"http://127.0.0.1:{state['port']}"
-    request = Request(origin + '/api/shutdown', data=b'{}',
+    origin = f"http://{state['bind']}:{state['port']}"
+    request = Request(origin + state['base_path'] + 'api/shutdown', data=b'{}',
                       headers={'Origin': origin, 'X-Session-Token': state['session'],
                                'Content-Type': 'application/json'}, method='POST')
     try:
@@ -84,7 +87,7 @@ def stop_previous():
     while time.monotonic() < deadline:
         with socket.socket() as connection:
             connection.settimeout(.2)
-            if connection.connect_ex(('127.0.0.1', state['port'])) != 0:
+            if connection.connect_ex((state['bind'], state['port'])) != 0:
                 print('Previous dashboard stopped.')
                 return state['port']
         time.sleep(.05)
@@ -130,7 +133,8 @@ def restarting_dashboard(factory, credentials, projects, reporters, port=0):
         stop_legacy_launchers()
         server = factory(credentials, projects, reporters, port or previous_port or 0)
         state = {'application': 'jira-custom-report', 'workspace': str(jira_paths.D_PROJECT.resolve()),
-                 'pid': os.getpid(), 'port': server.server_port, 'session': server.session}
+                 'pid': os.getpid(), 'port': server.server_port, 'session': server.session,
+                 'bind': server.bind_address, 'base_path': server.base_path}
         pending = state_path().with_suffix(f'.{os.getpid()}.pending')
         try:
             pending.write_text(json.dumps(state), encoding='utf-8')

@@ -1,5 +1,6 @@
 
 const config=WEB_CONFIG;
+function apiPath(path){return (config.basePath||'/')+path.replace(/^\//,'')}
 // Restore the inputs saved on disk into localStorage when this origin has none (for example after a restart on a new port).
 for(const [key,value] of Object.entries(config.saved||{}))if(typeof value==='string'&&value){try{if(!localStorage.getItem('jira-'+key))localStorage.setItem('jira-'+key,value)}catch{}}
 const yearSelect=byId('year'), form=byId('query-form'), status=byId('query-status');
@@ -48,7 +49,7 @@ select.disabled=true;
 hasResults=false;byId('report-panel').hidden=true;byId('period-tabs').hidden=true;byId('period-controls').hidden=true;
 status.className='';queryStatus('projectsLoading');
 try{
-const response=await fetch('/api/projects',{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':config.session},body:'{}'});
+const response=await fetch(apiPath('/api/projects'),{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':config.session},body:'{}'});
 const result=await response.json();if(!response.ok)throw new Error(result.error||'Could not load projects.');
 projectCatalog=result.projects;
 showProjectCount();
@@ -86,7 +87,7 @@ remember('year',String(year));remember('projects',JSON.stringify(projects));reme
 status.className='';queryStatus('loading',{year});invalidateReport();
 if(calcMode==='unresolved')showUnresolvedLoading();
 try{
-const response=await fetch('/api/report',{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':config.session},body:JSON.stringify({year,projects,reporters,period:activePeriod,includeUnresolved:calcMode==='unresolved'})});
+const response=await fetch(apiPath('/api/report'),{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':config.session},body:JSON.stringify({year,projects,reporters,period:activePeriod,includeUnresolved:calcMode==='unresolved'})});
 const result=await response.json();if(generation!==queryGeneration)return;if(!response.ok)throw new Error(result.error||'Query failed.');
 datasets=result.datasets;loadedProjectReports=result.projectReports||[];
 if(typeof loadedFilters!=='undefined')loadedFilters={year,projects:displayNames,reporters:reportersField.values.map(chip=>chip.label)};
@@ -109,7 +110,7 @@ const key=text.trim(),lower=key.toLowerCase();
 if(!/^[A-Za-z0-9_-]{1,50}$/.test(key)||projectCatalog.some(project=>project.key.toLowerCase().includes(lower)||project.name.toLowerCase().includes(lower)))return Promise.resolve(null);
 if(!projectLookups.has(lower))projectLookups.set(lower,(async()=>{
 try{
-const response=await fetch('/api/project',{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':config.session},body:JSON.stringify({key:key.toUpperCase()})});
+const response=await fetch(apiPath('/api/project'),{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':config.session},body:JSON.stringify({key:key.toUpperCase()})});
 if(!response.ok)return null;
 const project=await response.json();
 if(!projectCatalog.some(known=>known.key===project.key)){projectCatalog.push(project);showProjectCount()}
@@ -126,7 +127,7 @@ const findUser=text=>{const lower=text.trim().toLowerCase(),matches=[...knownUse
 function searchJiraUsers(query){
 const key=query.trim().toLowerCase();
 if(!reporterCache.has(key))reporterCache.set(key,(async()=>{
-const response=await fetch('/api/reporters',{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':config.session},body:JSON.stringify({query:query.trim()})});
+const response=await fetch(apiPath('/api/reporters'),{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':config.session},body:JSON.stringify({query:query.trim()})});
 const result=await response.json();if(!response.ok)throw new Error(result.error||'Reporter search failed.');
 return result.reporters.map(user=>{const item={value:user.name,name:user.displayName,label:user.displayName===user.name?user.name:user.displayName+' ('+user.name+')'};knownUsers.set(item.value.toLowerCase(),item);return item});
 })().catch(error=>{reporterCache.delete(key);throw error}));
@@ -156,7 +157,7 @@ const cell=value=>{let text=String(value);if(/^[=+@\-\t\r]/.test(text))text="'"+
 const csv='\ufeff'+rows.map(row=>row.map(cell).join(',')).join('\r\n');
 try{
  const now=new Date(),stamp=now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0')+String(now.getSeconds()).padStart(2,'0');
- const response=await fetch('/api/output',{method:'POST',headers:{'Content-Type':'text/csv;charset=utf-8','X-Session-Token':config.session,'X-Output-Name':'jira_'+stamp+'_'+yearSelect.value+'_issues.csv'},body:csv});
+ const response=await fetch(apiPath('/api/output'),{method:'POST',headers:{'Content-Type':'text/csv;charset=utf-8','X-Session-Token':config.session,'X-Output-Name':'jira_'+stamp+'_'+yearSelect.value+'_issues.csv'},body:csv});
  const result=await response.json();if(!response.ok)throw new Error(result.error||'CSV save failed.');setStatus('exportDone',{filename:result.saved});
 }catch(error){setStatus('csvFailed',{},error.message)}
 });

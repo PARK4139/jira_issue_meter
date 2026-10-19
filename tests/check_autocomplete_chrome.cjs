@@ -19,7 +19,7 @@ async function main() {
   const inputsFile = path.join(output, 'fixture-inputs.json');
   await fs.rm(inputsFile, {force: true}); // start with no saved inputs
   const fixture = spawn(path.join(root, '.venv', 'Scripts', 'python.exe'),
-    ['-c', "import runpy; runpy.run_path('tests/serve_dashboard_fixture.py', run_name='__main__')"], {cwd: root, windowsHide: true});
+    ['-c', "import runpy; runpy.run_path('tests/serve_dashboard_fixture.py', run_name='__main__')", '--base-path', '/issue-meter/'], {cwd: root, windowsHide: true});
   let origin = '', chrome, client, restarted;
   fixture.stdout.on('data', chunk => origin += chunk.toString());
   fixture.stderr.on('data', chunk => process.stderr.write(chunk));
@@ -228,7 +228,7 @@ async function main() {
     assert.ok(!JSON.stringify(saved).includes('synthetic-secret') && !JSON.stringify(saved).includes('jira.invalid'), 'no credentials or URLs are saved');
     assert.equal(await evaluate("localStorage.getItem('jira-projects')"), '["HTG","OTHER"]', 'localStorage holds the same values');
     restarted = spawn(path.join(root, '.venv', 'Scripts', 'python.exe'),
-      ['-c', "import runpy; runpy.run_path('tests/serve_dashboard_fixture.py', run_name='__main__')"], {cwd: root, windowsHide: true});
+      ['-c', "import runpy; runpy.run_path('tests/serve_dashboard_fixture.py', run_name='__main__')", '--base-path', '/issue-meter/'], {cwd: root, windowsHide: true});
     let secondOrigin = '';
     restarted.stdout.on('data', chunk => secondOrigin += chunk.toString());
     restarted.stderr.on('data', chunk => process.stderr.write(chunk));

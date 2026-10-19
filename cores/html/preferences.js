@@ -25,7 +25,7 @@ function remember(key,value){try{localStorage.setItem('jira-'+key,value)}catch{}
 async function syncInputs(){
 const values={};
 for(const key of SAVED_INPUTS){const value=preference(key,'');if(value)values[key]=value}
-try{await fetch('/api/inputs',{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':config.session},body:JSON.stringify({values})})}catch{}
+try{await fetch(apiPath('/api/inputs'),{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':config.session},body:JSON.stringify({values})})}catch{}
 }
 function colorChart(){
  const css=getComputedStyle(document.documentElement),colors={created:css.getPropertyValue('--created').trim(),resolved:css.getPropertyValue('--resolved').trim()};
@@ -86,7 +86,7 @@ const enable=!autoLoginOn,button=byId('autologin');
 if(enable&&!confirm(t('autoLoginConfirm')))return;
 button.disabled=true;
 try{
-const response=await fetch('/api/autologin',{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':config.session},body:JSON.stringify({enabled:enable})});
+const response=await fetch(apiPath('/api/autologin'),{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':config.session},body:JSON.stringify({enabled:enable})});
 const result=await response.json();if(!response.ok)throw new Error(result.error||'');
 autoLoginOn=result.enabled===true;status.className='';setStatus(autoLoginOn?'autoLoginEnabled':'autoLoginDisabled');
 }catch(error){status.className='error';setStatus('autoLoginFailed',{},error.message)}

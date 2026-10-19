@@ -1,6 +1,7 @@
-"""Loopback HTTP boundary: session checks, validation, and safe responses."""
+"""Dashboard HTTP boundary: explicit bind address, session checks, and safe responses."""
 from datetime import datetime
 import errno
+import ipaddress
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
@@ -22,6 +23,20 @@ from jira_paths import D_OUTPUTS
 from jira_projects import fetch_project, fetch_projects
 from jira_reporters import search_reporters
 from jira_settings import Settings
+
+
+def normalize_base_path(value: str) -> str:
+    path = '/' + value.strip('/') + '/' if value.strip('/') else '/'
+    if not re.fullmatch(r'/(?:[A-Za-z0-9_-]+/)*', path):
+        raise ValueError('Base path must contain only letters, numbers, hyphens, underscores, and slashes.')
+    return path
+
+
+def validate_bind_address(value: str) -> str:
+    address = ipaddress.ip_address(value)
+    if address.version != 4 or address.is_unspecified or address.is_multicast:
+        raise ValueError('Bind address must be one concrete IPv4 address, such as 127.0.0.1 or a LAN address.')
+    return str(address)
 
 
 def reveal_output(path):
@@ -49,8 +64,10 @@ class DashboardServer(ThreadingHTTPServer):
             return  # The browser closed the local connection before the response completed.
         super().handle_error(request, client_address)
 
-    def __init__(self, credentials: Credentials, projects: list[str], reporters: list[str], port: int = 0, *, autologin=None, hot_reload=False):
-        super().__init__(("127.0.0.1", port), DashboardHandler)
+    def __init__(self, credentials: Credentials, projects: list[str], reporters: list[str], port: int = 0, *, autologin=None, hot_reload=False, bind='127.0.0.1', base_path='/'):
+        self.bind_address = validate_bind_address(bind)
+        self.base_path = normalize_base_path(base_path)
+        super().__init__((self.bind_address, port), DashboardHandler)
         self.credentials = credentials
         self.autologin = autologin if autologin is not None else NoAutoLogin()
         self.projects, self.reporters = projects, reporters
@@ -59,7 +76,7 @@ class DashboardServer(ThreadingHTTPServer):
         self.session = secrets.token_urlsafe(32)
         self.query_lock = threading.Lock()
         self.current_year = datetime.now(TZ).year
-        self.origin = f"http://127.0.0.1:{self.server_port}"
+        self.origin = f"http://{self.bind_address}:{self.server_port}"
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
@@ -88,17 +105,28 @@ class DashboardHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self.trusted_host():
             self.respond(403, {'error': 'Untrusted host.'})
-        elif self.path == '/':
+        elif self.base_path_redirect():
+            return
+        elif self.path == self.server.base_path:
             if self.server.hot_reload:
                 read_asset.cache_clear()
             self.respond(200, dashboard_html(self.server.session, ' '.join(self.server.projects),
                                             self.server.reporters, self.server.current_year, load_inputs(),
                                              {'available': self.server.autologin.available, 'enabled': self.server.autologin.enabled()},
-                                             hot_reload=self.server.hot_reload), 'text/html')
-        elif self.path == '/__dev/revision' and self.server.hot_reload:
+                                             hot_reload=self.server.hot_reload, base_path=self.server.base_path), 'text/html')
+        elif self.path == self.server.base_path + '__dev/revision' and self.server.hot_reload:
             self.respond(200, {'revision': asset_revision(), 'session': self.server.session})
         else:
             self.respond(404, {'error': 'Not found.'})
+
+    def base_path_redirect(self):
+        if self.server.base_path != '/' and self.path in ('/', self.server.base_path.rstrip('/')):
+            self.send_response(308)
+            self.send_header('Location', self.server.base_path)
+            self.send_header('Content-Length', '0')
+            self.end_headers()
+            return True
+        return False
 
     def discard_body(self):
         # Drain small rejected requests so Windows does not reset the connection
@@ -117,10 +145,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.discard_body()
             self.respond(403, {'error': 'Untrusted request. Open the dashboard from the launcher URL.'})
             return
-        if self.path == '/api/output':
+        if not self.path.startswith(self.server.base_path):
+            self.discard_body()
+            self.respond(404, {'error': 'Not found.'})
+            return
+        path = '/' + self.path[len(self.server.base_path):]
+        if path == '/api/output':
             self.save_output()
             return
-        if self.path not in ('/api/report', '/api/projects', '/api/project', '/api/reporters', '/api/inputs', '/api/autologin', '/api/shutdown'):
+        if path not in ('/api/report', '/api/projects', '/api/project', '/api/reporters', '/api/inputs', '/api/autologin', '/api/shutdown'):
             self.discard_body()
             self.respond(404, {'error': 'Not found.'})
             return
@@ -129,13 +162,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
             if not 0 < length <= 65536 or self.headers.get('Content-Type') != 'application/json':
                 raise ValueError
             payload = json.loads(self.rfile.read(length))
-            if self.path == '/api/shutdown':
+            if path == '/api/shutdown':
                 if payload != {}:
                     raise ValueError
                 self.respond(200, {'application': 'jira-custom-report', 'stopping': True})
                 threading.Thread(target=self.server.shutdown, daemon=True).start()
                 return
-            if self.path == '/api/projects':
+            if path == '/api/projects':
                 if payload != {}:
                     raise ValueError
                 try:
@@ -150,7 +183,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self.server.project_names = {project['key']: project['name'] for project in projects}
                     self.respond(200, {'projects': projects})
                 return
-            if self.path == '/api/project':
+            if path == '/api/project':
                 if not isinstance(payload, dict) or set(payload) != {'key'}:
                     raise ValueError
                 try:
@@ -168,7 +201,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self.server.project_names[project['key']] = project['name']
                     self.respond(200, project)
                 return
-            if self.path == '/api/autologin':
+            if path == '/api/autologin':
                 if not isinstance(payload, dict) or set(payload) != {'enabled'} or type(payload['enabled']) is not bool:
                     raise ValueError
                 if not self.server.autologin.available:
@@ -185,7 +218,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 else:
                     self.respond(200, {'enabled': self.server.autologin.enabled()})
                 return
-            if self.path == '/api/inputs':
+            if path == '/api/inputs':
                 if not isinstance(payload, dict) or set(payload) != {'values'}:
                     raise ValueError
                 try:
@@ -197,7 +230,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 else:
                     self.respond(200, {'saved': True})
                 return
-            if self.path == '/api/reporters':
+            if path == '/api/reporters':
                 if not isinstance(payload, dict) or set(payload) != {'query'}:
                     raise ValueError
                 try:

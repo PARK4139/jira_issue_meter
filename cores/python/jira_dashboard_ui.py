@@ -8,7 +8,7 @@ from jira_report_view import render_html
 
 
 def dashboard_html(session: str, project: str, reporters: list[str], current_year: int, saved: dict | None = None,
-                   auto_login: dict | None = None, hot_reload: bool = False) -> str:
+                   auto_login: dict | None = None, hot_reload: bool = False, base_path: str = '/') -> str:
     html = render_html("Jira", current_year, [], [], {period: [] for period in PERIODS})
     html = html.replace('const datasets=', 'let datasets=')
     html = html.replace('<h1>Jira', '<h1 id="report-title">Jira')
@@ -22,7 +22,7 @@ def dashboard_html(session: str, project: str, reporters: list[str], current_yea
     html = html.replace('<p id="period-note">', '<button type="button" id="download-csv">Download CSV</button><p id="period-note">', 1)
     html = html.replace('</style>', read_asset("dashboard.css") + "</style>")
     config = json.dumps(dict(session=session, project=project, reporters=reporters, currentYear=current_year, saved=saved or {},
-                                 autoLogin=auto_login or {'available': False, 'enabled': False}))
+                                 autoLogin=auto_login or {'available': False, 'enabled': False}, basePath=base_path))
     config = config.replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
     script = (read_asset("combo.js") + read_asset("dashboard.js") + read_asset("project-charts.js")).replace('WEB_CONFIG', config)
     if hot_reload:
@@ -30,7 +30,7 @@ def dashboard_html(session: str, project: str, reporters: list[str], current_yea
     return arrange_layout(enhance_dashboard(html.replace('</script>', script + '</script>', 1)))
 
 
-HOT_RELOAD_SCRIPT = """(()=>{let revision=null;setInterval(async()=>{try{const response=await fetch('/__dev/revision',{cache:'no-store'});if(!response.ok)return;const data=await response.json();const current=data.revision+':'+data.session;if(revision!==null&&current!==revision)location.reload();revision=current}catch{}} ,700)})();"""
+HOT_RELOAD_SCRIPT = """(()=>{let revision=null;setInterval(async()=>{try{const response=await fetch(apiPath('/__dev/revision'),{cache:'no-store'});if(!response.ok)return;const data=await response.json();const current=data.revision+':'+data.session;if(revision!==null&&current!==revision)location.reload();revision=current}catch{}} ,700)})();"""
 
 
 def enhance_dashboard(html: str) -> str:

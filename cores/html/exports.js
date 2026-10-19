@@ -34,7 +34,7 @@ async function exportJpg(){
   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.94));if(!blob)throw new Error('encoding failed');
   const now=new Date(),stamp=now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0')+String(now.getSeconds()).padStart(2,'0');
   const filename='jira_'+stamp+'_'+loadedFilters.year+'_'+activePeriod+'_'+locale+'_'+theme+'.jpg';
-  const response=await fetch('/api/output',{method:'POST',headers:{'Content-Type':'image/jpeg','X-Session-Token':config.session,'X-Output-Name':filename},body:blob});
+  const response=await fetch(apiPath('/api/output'),{method:'POST',headers:{'Content-Type':'image/jpeg','X-Session-Token':config.session,'X-Output-Name':filename},body:blob});
   const result=await response.json();if(!response.ok)throw new Error(result.error||'JPG save failed.');setStatus(...previousStatus);
  }catch(error){console.error('JPG export failed:',error);status.className='error';setStatus('exportFailed')}
  finally{controls.forEach((control,i)=>control.disabled=disabled[i]);button.disabled=false;button.textContent=t('jpg')}

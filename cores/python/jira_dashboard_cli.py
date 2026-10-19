@@ -7,7 +7,7 @@ import webbrowser
 from jira_autologin import WindowsAutoLogin
 from jira_credentials import HTTP_WARNING, prompt_credentials
 from jira_inputs import saved_language
-from jira_dashboard_server import DashboardServer
+from jira_dashboard_server import DashboardServer, normalize_base_path, validate_bind_address
 from jira_dashboard_lifecycle import restarting_dashboard
 from jira_settings import load_settings
 
@@ -38,12 +38,19 @@ def main():
     parser.add_argument('--reporter', nargs='+', help='Initial reporter IDs; editable in the browser')
     parser.add_argument('--profile', default='default', help='Read existing nonsecret defaults')
     parser.add_argument('--port', type=int, default=0, help='Local port (default: automatically allocated)')
+    parser.add_argument('--bind', '--host', default='127.0.0.1', help='IPv4 address to listen on; use this PC\'s LAN address for shared access')
+    parser.add_argument('--base-path', default='/', help='Dashboard path, for example /issue-meter/')
     parser.add_argument('--no-open', action='store_true', help='Print the dashboard URL without opening a browser')
     parser.add_argument('--hot-reload', action='store_true', help='Reload the browser when dashboard HTML, CSS, or JavaScript assets change')
     parser.add_argument('--no-auto-login', action='store_true', help='Ask for the password even if Auto login is on (it stays on)')
     args = parser.parse_args()
     if not 0 <= args.port <= 65535:
         parser.error('port must be between 0 and 65535')
+    try:
+        args.bind = validate_bind_address(args.bind)
+        args.base_path = normalize_base_path(args.base_path)
+    except ValueError as error:
+        parser.error(str(error))
     saved = load_settings(args.profile, allow_insecure_http=True)
     autologin = WindowsAutoLogin(args.profile)
     url, user_id = args.url or (saved.site_url if saved else None), args.user_id or (saved.email if saved else None)
@@ -56,11 +63,12 @@ def main():
             print(HTTP_WARNING[saved_language()], file=sys.stderr)
     else:
         credentials = prompt_credentials(url, user_id, allow_insecure_http=args.allow_insecure_http)
-    with restarting_dashboard(lambda *arguments: DashboardServer(*arguments, autologin=autologin, hot_reload=args.hot_reload), credentials, args.project or (saved.projects if saved else []),
+    with restarting_dashboard(lambda *arguments: DashboardServer(*arguments, autologin=autologin, hot_reload=args.hot_reload, bind=args.bind, base_path=args.base_path), credentials, args.project or (saved.projects if saved else []),
                          args.reporter or (saved.reporters if saved else []), args.port) as server:
-        print(f'Dashboard: {server.origin}/')
+        dashboard_url = server.origin + args.base_path
+        print(f'Dashboard: {dashboard_url}')
         print('Select the year in your browser. Keep this terminal open; press Ctrl+C to stop.')
-        if not args.no_open and not open_browser(server.origin + '/'):
+        if not args.no_open and not open_browser(dashboard_url):
             print('Open the dashboard URL above in your browser.')
         try:
             server.serve_forever()

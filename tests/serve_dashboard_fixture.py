@@ -44,6 +44,7 @@ def unresolved_snapshots(projects, year, reporters, credentials, period):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=0)
+    parser.add_argument('--base-path', default='/')
     args = parser.parse_args()
     output_dir = Path('.local/ui-verification/fixture-outputs').resolve()
     inputs_file = Path('.local/ui-verification/fixture-inputs.json').resolve()
@@ -56,6 +57,6 @@ if __name__ == "__main__":
             "jira_dashboard_server.fetch_project", side_effect=find_project), patch(
             "jira_dashboard_server.search_reporters", side_effect=search_users), DashboardServer(
             Credentials("https://jira.invalid", "synthetic-user", "synthetic-secret"),
-            ["DEMO"], ["sample"], port=args.port) as server:
-        print(server.origin, flush=True)
+            ["DEMO"], ["sample"], port=args.port, base_path=args.base_path) as server:
+        print(server.origin + (server.base_path if server.base_path != '/' else ''), flush=True)
         server.serve_forever()
