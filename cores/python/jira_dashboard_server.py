@@ -1,5 +1,6 @@
 """Loopback HTTP boundary: session checks, validation, and safe responses."""
 from datetime import datetime
+import errno
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
@@ -13,6 +14,7 @@ from jira_autologin import NoAutoLogin
 from cores.html import asset_revision, read_asset
 from jira_credentials import Credentials
 from jira_dashboard_service import build_report
+from jira_dashboard_log import record_exception, record_response
 from jira_dashboard_ui import dashboard_html
 from jira_inputs import load_inputs, save_inputs
 from jira_issue_monthly import TZ
@@ -38,6 +40,15 @@ def reveal_output(path):
 class DashboardServer(ThreadingHTTPServer):
     daemon_threads = True
 
+    def handle_error(self, request, client_address):
+        error = sys.exc_info()[1]
+        record_exception(error, getattr(self, 'credentials', None))
+        if isinstance(error, OSError) and (
+                error.errno in (errno.EPIPE, errno.ECONNRESET, errno.ECONNABORTED, errno.ETIMEDOUT)
+                or getattr(error, 'winerror', None) in (10053, 10054, 10060)):
+            return  # The browser closed the local connection before the response completed.
+        super().handle_error(request, client_address)
+
     def __init__(self, credentials: Credentials, projects: list[str], reporters: list[str], port: int = 0, *, autologin=None, hot_reload=False):
         super().__init__(("127.0.0.1", port), DashboardHandler)
         self.credentials = credentials
@@ -57,6 +68,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def respond(self, code: int, payload, content_type="application/json"):
         body = payload.encode('utf-8') if isinstance(payload, str) else json.dumps(payload).encode('utf-8')
+        record_response(self.command, self.path, code)
         self.send_response(code)
         self.send_header('Content-Type', content_type + '; charset=utf-8')
         self.send_header('Content-Length', str(len(body)))
@@ -129,8 +141,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 try:
                     projects = fetch_projects(self.server.credentials)
                 except RuntimeError as error:
+                    record_exception(error, self.server.credentials)
                     self.respond(502, {'error': str(error)})
-                except Exception:
+                except Exception as error:
+                    record_exception(error, self.server.credentials)
                     self.respond(500, {'error': 'Could not load Jira projects. Try reloading the list.'})
                 else:
                     self.server.project_names = {project['key']: project['name'] for project in projects}
@@ -144,9 +158,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 except ValueError:
                     self.respond(400, {'error': 'Enter a valid Jira project key.'})
                 except RuntimeError as error:
+                    record_exception(error, self.server.credentials)
                     self.respond(404 if str(error).startswith('Jira HTTP 404') else 502,
                                  {'error': 'Project not found.' if str(error).startswith('Jira HTTP 404') else str(error)})
-                except Exception:
+                except Exception as error:
+                    record_exception(error, self.server.credentials)
                     self.respond(500, {'error': 'Could not look up the Jira project. Try again.'})
                 else:
                     self.server.project_names[project['key']] = project['name']
@@ -164,6 +180,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     else:
                         self.server.autologin.disable()
                 except RuntimeError as error:
+                    record_exception(error, self.server.credentials)
                     self.respond(500, {'error': str(error)})
                 else:
                     self.respond(200, {'enabled': self.server.autologin.enabled()})
@@ -188,8 +205,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 except ValueError:
                     self.respond(400, {'error': 'Enter a shorter reporter search without control characters.'})
                 except RuntimeError as error:
+                    record_exception(error, self.server.credentials)
                     self.respond(502, {'error': str(error)})
-                except Exception:
+                except Exception as error:
+                    record_exception(error, self.server.credentials)
                     self.respond(500, {'error': 'Could not search Jira users. Try again.'})
                 else:
                     self.respond(200, {'reporters': reporters})
@@ -219,8 +238,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, response = 200, build_report(settings, self.server.credentials, self.server.project_names,
                                                  period, include_unresolved)
         except RuntimeError as error:
+            record_exception(error, self.server.credentials)
             status, response = 502, {'error': str(error)}
-        except Exception:
+        except Exception as error:
+            record_exception(error, self.server.credentials)
             status, response = 500, {'error': 'Could not complete the Jira query. Check the terminal and retry.'}
         finally:
             self.server.query_lock.release()
