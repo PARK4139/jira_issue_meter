@@ -41,7 +41,11 @@ sys.path.insert(0, sys.argv[1])
 from jira_dashboard_ui import dashboard_html
 from jira_report_view import render_html
 import cores.html
+import jira_dashboard_server
+import jira_dashboard_log
 assert 'installed.zip' in cores.html.__file__
+assert 'installed.zip' in jira_dashboard_server.__file__
+assert 'installed.zip' in jira_dashboard_log.__file__
 page = dashboard_html('synthetic-session', 'DEMO', ['sample'], 2026)
 assert 'async function loadReport' in page and 'async function exportJpg' in page
 assert '--page:' in page and 'id="period-select"' in page

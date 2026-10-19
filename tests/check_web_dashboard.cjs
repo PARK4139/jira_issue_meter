@@ -68,7 +68,7 @@ assert.deepEqual(requests.at(-1).projects,['DEMO','OTHER']);
 assert.equal(elements.get('report-title').textContent,'ISSUE MEATER','the page title is fixed text');
 assert.ok(elements.get('period-heading').textContent.length>0);
 assert.equal(elements.get('report-panel').hidden,false);
-assert.equal(elements.get('project-graphs').children.length,2);
+assert.equal(elements.get('project-graphs').children.filter(node=>node.className==='project-report').length,2);
 assert.equal(elements.get('project-graphs').children[0].children[0].textContent,'Quality team (DEMO)');
 assert.equal(elements.get('project-graphs').children[1].children[0].textContent,'Other team (OTHER)');
 assert.equal(elements.get('summary').children.length,0,'no combined totals; each project graph carries its own ratio');
@@ -160,7 +160,7 @@ elements.get('locale').value='en';for(const handler of elements.get('locale').ha
 vm.runInContext("projectsField.set([{value:'OTHER',label:'Other team (OTHER)'}])",context);
 await vm.runInContext('loadReport()',context);
 assert.deepEqual(requests.at(-1).projects,['OTHER']);
-assert.equal(elements.get('project-graphs').children.length,1);
+assert.equal(elements.get('project-graphs').children.filter(node=>node.className==='project-report').length,1);
 assert.equal(elements.get('project-graphs').children[0].children[0].textContent,'Other team (OTHER)');
 failure=true;await vm.runInContext('loadReport()',context);
 assert.equal(elements.get('report-panel').hidden,true);

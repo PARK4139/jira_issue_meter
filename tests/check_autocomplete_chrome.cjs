@@ -184,9 +184,30 @@ async function main() {
     await removeChip('projects', 2);
     await waitFor(() => reportBodies.at(-1)?.projects?.join() === 'HTG,OTHER', 'report after removing the looked-up project');
 
+    // Combined graph: ratio lines, aligned endpoint fields, project colors, and JQL proof.
+    await evaluate(`(()=>{for(const [id,value] of [['year','2025'],['period-select','quarterly'],['calc-mode','periodic'],['chart-layout','single'],['locale','en']]){const input=document.getElementById(id);input.value=value;input.dispatchEvent(new Event('change',{bubbles:true}))}if(document.documentElement.dataset.theme!=='dark')document.getElementById('theme').click();return true})()`);
+    await waitFor(()=>evaluate("!queryRunning && hasResults && document.querySelectorAll('.single-graph svg path').length===2"),'combined graph');
+    const combined=await evaluate(`(()=>{const section=document.querySelector('.single-graph'),svg=section.querySelector('svg'),names=[...svg.querySelectorAll('text[data-series]:not([text-anchor])')],ratios=[...svg.querySelectorAll('text[data-series][text-anchor="end"]')];return {paths:svg.querySelectorAll('path').length,names:names.map(n=>n.getAttribute('x')),ratios:ratios.map(n=>({x:n.getAttribute('x'),text:n.textContent,color:n.getAttribute('fill')})),legend:section.querySelectorAll('.single-graph-legend').length,proof:section.querySelector('summary').textContent,tables:section.querySelectorAll('details table').length}})()`);
+    assert.equal(combined.paths,2);assert.equal(combined.legend,0);
+    assert.equal(new Set(combined.names).size,1);assert.equal(combined.names.length,2);
+    assert.equal(new Set(combined.ratios.map(n=>n.x)).size,1);
+    assert.ok(combined.ratios.every(n=>/^\d+(\.\d)?%$/.test(n.text)));
+    assert.equal(new Set(combined.ratios.map(n=>n.color)).size,2,'each project keeps its line color');
+    assert.equal(combined.proof,'JQL FOR DATA PROOF');assert.equal(combined.tables,2);
+    await evaluate("document.getElementById('theme').click();document.getElementById('theme').click();true");
+    assert.deepEqual(await evaluate("[...document.querySelectorAll('.single-graph text[data-series][text-anchor=\"end\"]')].map(n=>n.getAttribute('fill'))"),combined.ratios.map(n=>n.color));
+    const combinedShot=await send('Page.captureScreenshot',{format:'png'});
+    await fs.writeFile(path.join(output,'combined-graph.png'),Buffer.from(combinedShot.data,'base64'));
+    const crowded=await evaluate(`(()=>{const original=loadedProjectReports;try{loadedProjectReports=Array.from({length:20},(_,i)=>({...original[0],key:'P'+i,name:'Project '+i}));render(activePeriod);const svg=document.querySelector('.single-graph svg');return {height:svg.viewBox.baseVal.height,positions:[...svg.querySelectorAll('text[data-series][text-anchor="end"]')].map(n=>Number(n.getAttribute('y')))}}finally{loadedProjectReports=original;render(activePeriod)}})()`);
+    assert.equal(crowded.positions.length,20);
+    assert.ok(crowded.positions.every(y=>y>=48&&y<=crowded.height-93),'20 coincident endpoints stay inside the graph');
+    const ordered=[...crowded.positions].sort((a,b)=>a-b);
+    assert.ok(ordered.slice(1).every((y,i)=>y-ordered[i]>=17),'labels remain separated');
+
     // Persistence: every input is mirrored to the git-ignored file, and a restart on another port (new origin, empty localStorage) restores it.
     await waitFor(async () => { try { const saved = JSON.parse(await fs.readFile(inputsFile, 'utf8')); return saved.projects === '["HTG","OTHER"]' && JSON.parse(saved.reporters).length === 2; } catch { return false; } }, 'inputs saved to disk');
     const saved = JSON.parse(await fs.readFile(inputsFile, 'utf8'));
+    await waitFor(async()=>{const values=JSON.parse(await fs.readFile(inputsFile,'utf8'));return values.year==='2025'&&values.period==='quarterly'&&values.mode==='periodic'&&values.chartLayout==='single'&&values.locale==='en'&&values.theme==='dark'},'all filters saved');
     assert.deepEqual(JSON.parse(saved.reporters), [{value: 'parkjh', label: '박정훈 (parkjh)'}, {value: 'kimsh', label: '김선희 (kimsh)'}], 'the file keeps each reporter name and ID');
     assert.ok(!JSON.stringify(saved).includes('synthetic-secret') && !JSON.stringify(saved).includes('jira.invalid'), 'no credentials or URLs are saved');
     assert.equal(await evaluate("localStorage.getItem('jira-projects')"), '["HTG","OTHER"]', 'localStorage holds the same values');
@@ -204,6 +225,9 @@ async function main() {
     assert.deepEqual(await chips('reporters'), ['박정훈 (parkjh)', '김선희 (kimsh)'], 'reporters survive the restart with name and ID');
     assert.equal(reportBodies.at(-1).projects.join(), 'HTG,OTHER'); assert.equal(reportBodies.at(-1).reporters.join(), 'parkjh,kimsh');
     assert.equal(await evaluate("localStorage.getItem('jira-projects')"), '["HTG","OTHER"]', 'the new origin localStorage is seeded from the file');
+    assert.deepEqual(await evaluate("['year','period-select','calc-mode','chart-layout','locale'].map(id=>document.getElementById(id).value)"),['2025','quarterly','periodic','single','en']);
+    assert.equal(await evaluate("document.documentElement.dataset.theme"),'dark');
+    assert.equal(await evaluate("document.querySelectorAll('.single-graph details table').length"),2);
 
     assert.deepEqual(exceptions, []);
     console.log('PASS: actual Chrome, click lists Jira candidates, typing queries Jira, skim-style matching, chips with name and ID for every selected project and reporter, Tab/Enter completion, Backspace/x removal, Ctrl+Space, and inputs restored from disk after a restart on another port.');

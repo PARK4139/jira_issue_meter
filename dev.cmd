@@ -3,7 +3,8 @@ setlocal
 pushd "%~dp0"
 rem Development dashboard with browser hot reload and Python source auto-restart.
 rem Uses fictional demo data and does not connect to Jira.
-set "UV=%~dp0tools\uv.exe"
+set "UV=%~dp0uv.exe"
+if not exist "%UV%" set "UV=%~dp0tools\uv.exe"
 if not exist "%UV%" set "UV=uv"
 "%UV%" --version >nul 2>nul
 if errorlevel 1 (

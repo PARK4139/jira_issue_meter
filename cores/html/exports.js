@@ -15,11 +15,11 @@ async function exportJpg(){
   text(messages[locale].periods[activePeriod]);text(t('projects')+': '+loadedFilters.projects.join(', '));text(t('reporters')+': '+loadedFilters.reporters.join(', '));
   const rows=datasets[activePeriod],{created,resolved}=cumulativeTotals(rows);
   text(t('created')+': '+created+'    '+t('resolved')+': '+resolved+'    '+t('ratio')+': '+(created?(resolved/created*100).toFixed(1)+'%':'—'));
-  text(t(calcMode==='periodic'?'notePeriodic':'note',{buckets:rows.length,count:rows.length*2}));
+  text(t(typeof chartLayout!=='undefined'&&chartLayout==='single'&&calcMode!=='unresolved'?'noteRatio':calcMode==='unresolved'?'noteUnresolved':calcMode==='periodic'?'notePeriodic':'note',{buckets:rows.length,count:rows.length*2}));
   const chartY=62+lines.length*42+24;
-  const charts=[...document.querySelectorAll('.project-report')].map(section=>({title:section.querySelector('h3').textContent,svg:section.querySelector('svg'),legend:[...section.querySelectorAll('.single-graph-legend-item')].map(item=>({text:item.textContent,color:getComputedStyle(item).getPropertyValue('--series-color').trim(),dashed:Boolean(item.querySelector('.dashed'))}))}));
-  if(!charts.length)charts.push({title:'',svg:document.querySelector('svg'),legend:[]});
-  const chartBottom=charts.reduce((bottom,chart)=>bottom+740+chart.legend.length*28,chartY);
+  const charts=[...document.querySelectorAll('.project-report')].map(section=>({title:section.querySelector('h3').textContent,svg:section.querySelector('svg')}));
+  if(!charts.length)charts.push({title:'',svg:document.querySelector('svg')});
+  const chartBottom=chartY+charts.length*740;
   canvas.height=Math.max(1100,chartBottom+40);ctx.fillStyle=css.getPropertyValue('--page').trim();ctx.fillRect(0,0,1800,canvas.height);
   ctx.fillStyle=css.getPropertyValue('--ink').trim();lines.forEach((line,i)=>{ctx.font=line.font;ctx.fillText(line.text,60,62+i*42)});
   let top=chartY;
@@ -28,10 +28,9 @@ async function exportJpg(){
   const svg=chart.svg.cloneNode(true);svg.setAttribute('xmlns','http://www.w3.org/2000/svg');svg.setAttribute('width','1680');svg.setAttribute('height','650');svg.setAttribute('font-family','Segoe UI, Malgun Gothic, sans-serif');
   const image=new Image(),url=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)],{type:'image/svg+xml;charset=utf-8'}));
   try{await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('image timeout')),15000);image.onload=()=>{clearTimeout(timer);resolve()};image.onerror=error=>{clearTimeout(timer);reject(error)};image.src=url});ctx.drawImage(image,60,top+20,1680,650)}finally{URL.revokeObjectURL(url)}
-  if(chart.legend.length){ctx.font='18px "Segoe UI", "Malgun Gothic", sans-serif';for(const [index,item] of chart.legend.entries()){const y=top+700+index*28;ctx.strokeStyle=item.color;ctx.lineWidth=3;ctx.setLineDash(item.dashed?[8,5]:[]);ctx.beginPath();ctx.moveTo(70,y-6);ctx.lineTo(96,y-6);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=css.getPropertyValue('--ink').trim();ctx.fillText(item.text,108,y)}}
-  top+=740+chart.legend.length*28;
+  top+=740;
   }
-  ctx.font='24px "Segoe UI", "Malgun Gothic", sans-serif';ctx.fillStyle=css.getPropertyValue('--created').trim();ctx.fillText('● '+t('created'),60,canvas.height-35);ctx.fillStyle=css.getPropertyValue('--resolved').trim();ctx.fillText('● '+t('resolved'),300,canvas.height-35);
+  if(typeof chartLayout==='undefined'||chartLayout!=='single'){ctx.font='24px "Segoe UI", "Malgun Gothic", sans-serif';ctx.fillStyle=css.getPropertyValue('--created').trim();ctx.fillText('● '+t('created'),60,canvas.height-35);ctx.fillStyle=css.getPropertyValue('--resolved').trim();ctx.fillText('● '+t('resolved'),300,canvas.height-35);}
   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.94));if(!blob)throw new Error('encoding failed');
   const now=new Date(),stamp=now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0')+String(now.getSeconds()).padStart(2,'0');
   const filename='jira_'+stamp+'_'+loadedFilters.year+'_'+activePeriod+'_'+locale+'_'+theme+'.jpg';

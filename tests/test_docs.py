@@ -34,7 +34,7 @@ class QuickStartTests(unittest.TestCase):
         for option in re.findall(r"^\| `(--[a-z-]+)", GUIDE, re.M):
             with self.subTest(option=option):
                 self.assertIn(f"'{option}'", source)
-        self.assertIn("git clone https://github.com/PARK4139/Jira_custom_report", GUIDE)
+        self.assertIn("git clone https://github.com/PARK4139/jira_issue_meter", GUIDE)
         self.assertIn("run.cmd --url {Jira-server-url} --id {Jira-user-id}", GUIDE)
 
     def test_the_guide_shows_only_dummy_data_and_no_secrets(self):

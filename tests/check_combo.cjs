@@ -142,10 +142,14 @@ async function main() {
   fire(m.input, 'keydown', { key: ' ', code: 'Space', ctrlKey: true }); await settle();
   assert.equal(m.combo.values.length, 1, 'one chip after click + Ctrl+Space');
 
-  // Tab with nothing typed moves focus normally; arrows then Enter select without typing.
+  // Clicking an empty project field and pressing Tab selects the first candidate.
+  const tabField = field(() => projects);
+  fire(tabField.input, 'click'); await settle();
+  assert.equal(fire(tabField.input, 'keydown', { key: 'Tab' }).prevented, true);
+  same(tabField.combo.values.map(chip => chip.value), ['DEMO']);
+  assert.equal(fire(tabField.input, 'keydown', { key: 'Tab' }).prevented, undefined, 'closed list permits focus to move');
   const b = field(() => projects);
   fire(b.input, 'focus'); await settle();
-  assert.equal(fire(b.input, 'keydown', { key: 'Tab' }).prevented, undefined, 'Tab on an empty token does not hijack focus');
   fire(b.input, 'keydown', { key: 'ArrowDown' }); fire(b.input, 'keydown', { key: 'ArrowDown' });
   assert.equal(b.list.children[2].className, 'active');
   assert.equal(fire(b.input, 'keydown', { key: 'Enter' }).prevented, true);

@@ -33,8 +33,8 @@ function colorChart(){
  for(const label of byId('labels').children)label.setAttribute('fill',css.getPropertyValue('--muted').trim());
  for(const node of byId('series').children)for(const attr of ['stroke','fill']){const value=node.getAttribute(attr);if(['#ff6876','#bd2944'].includes(value))node.setAttribute(attr,colors.created);if(['#5bd4a4','#16714d'].includes(value))node.setAttribute(attr,colors.resolved)}
  document.querySelectorAll('.legend span').forEach((span,i)=>span.style.setProperty('--dot',i?colors.resolved:colors.created));
- document.querySelectorAll('.project-report svg line').forEach(node=>node.setAttribute('stroke',css.getPropertyValue('--grid').trim()));
- document.querySelectorAll('.project-report svg text').forEach(node=>node.setAttribute('fill',css.getPropertyValue('--muted').trim()));
+ document.querySelectorAll('.project-report svg line').forEach(node=>{if(!node.getAttribute('data-series'))node.setAttribute('stroke',css.getPropertyValue('--grid').trim())});
+ document.querySelectorAll('.project-report svg text').forEach(node=>{if(!node.getAttribute('data-series'))node.setAttribute('fill',css.getPropertyValue('--muted').trim())});
  document.querySelectorAll('.project-report svg path,.project-report svg circle').forEach(node=>{
   for(const attr of ['stroke','fill']){const value=node.getAttribute(attr);if(['#ff6876','#bd2944'].includes(value))node.setAttribute(attr,colors.created);if(['#5bd4a4','#16714d'].includes(value))node.setAttribute(attr,colors.resolved)}
  });
@@ -49,15 +49,15 @@ function translateReport(){
  showAutoLogin();
  byId('footer-text').textContent=t('footer');
  for(const option of byId('period-select').options)option.textContent=messages[locale].periods[option.value];
- const rows=datasets[activePeriod]||[];
- byId('period-heading').textContent=messages[locale].periods[activePeriod]+' · '+t(calcMode==='unresolved'?'titleUnresolved':calcMode==='periodic'?'titlePeriodic':'title');
- byId('period-note').textContent=t(calcMode==='unresolved'?'noteUnresolved':calcMode==='periodic'?'notePeriodic':'note',{buckets:rows.length,count:rows.length*2});
- document.querySelectorAll('table').forEach(table=>table.querySelectorAll('th').forEach((node,i)=>node.textContent=[t('range'),t('created'),t('resolved'),'JQL'][i]));
+ const rows=datasets[activePeriod]||[],combinedRatio=chartLayout==='single'&&calcMode!=='unresolved';
+ byId('period-heading').textContent=messages[locale].periods[activePeriod]+' · '+t(combinedRatio?'titleRatio':calcMode==='unresolved'?'titleUnresolved':calcMode==='periodic'?'titlePeriodic':'title');
+ byId('period-note').textContent=t(combinedRatio?'noteRatio':calcMode==='unresolved'?'noteUnresolved':calcMode==='periodic'?'notePeriodic':'note',{buckets:rows.length,count:rows.length*2});
+ document.querySelectorAll('table').forEach(table=>{const headers=table.querySelectorAll('th'),labels=[t('range'),t('created'),t('resolved'),...(headers.length===5?[t('unresolved')]:[]),'JQL'];headers.forEach((node,i)=>node.textContent=labels[i])});
  document.querySelectorAll('summary:not([data-text])').forEach(node=>node.textContent=t('view'));
  document.querySelectorAll('[data-ratio]').forEach(node=>node.textContent=t('ratio')+': '+node.dataset.ratio);
  document.querySelectorAll('[data-metric]').forEach(node=>node.textContent=t(node.dataset.metric)+': '+Number(node.dataset.count).toLocaleString(locale)+'   ');
  document.querySelectorAll('.legend span').forEach((node,i)=>node.textContent=t(i?'resolved':'created'));
- document.querySelector('svg').setAttribute('aria-label',t(calcMode==='unresolved'?'titleUnresolved':calcMode==='periodic'?'titlePeriodic':'title'));
+ document.querySelector('svg').setAttribute('aria-label',t(combinedRatio?'titleRatio':calcMode==='unresolved'?'titleUnresolved':calcMode==='periodic'?'titlePeriodic':'title'));
  for(const option of [...(byId('calc-mode').options||[])])option.textContent=(messages[locale].modes[option.value]||option.textContent);
  for(const option of [...byId('chart-layout').options])option.textContent=(messages[locale].chartLayouts||messages.en.chartLayouts)[option.value];
  document.querySelectorAll('svg title[data-period-field]').forEach(node=>node.textContent=node.dataset.periodStart+' / '+node.dataset.periodEnd+' '+t(node.dataset.periodField)+': '+Number(node.dataset.periodValue).toLocaleString(locale));

@@ -39,4 +39,4 @@ def build_report(settings: Settings, credentials: Credentials, project_names: di
                 dict(row, unresolved=snapshot['unresolved'], queries=dict(row['queries'], unresolved=snapshot['queries']['unresolved']))
                 for row, snapshot in zip(project_reports[project]['datasets'][selected_period], unresolved[project])]
     return {'year': year, 'datasets': datasets, 'projectReports': list(project_reports.values()),
-            'queryCount': request_count + unresolved_requests, 'unresolvedPeriod': selected_period}
+            'queryCount': request_count + unresolved_requests}

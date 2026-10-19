@@ -1,8 +1,9 @@
 @echo off
 setlocal
 pushd "%~dp0"
-rem Prefer the bundled uv (tools\uv.exe); otherwise use uv from PATH.
-set "UV=%~dp0tools\uv.exe"
+rem Prefer the project uv.exe, then tools\uv.exe, then uv from PATH.
+set "UV=%~dp0uv.exe"
+if not exist "%UV%" set "UV=%~dp0tools\uv.exe"
 if not exist "%UV%" set "UV=uv"
 "%UV%" --version >nul 2>nul
 if errorlevel 1 (

@@ -13,3 +13,7 @@ note:'그래프: 선택 연도 1월 1일부터 누적 / 표: 기간별 건수. {
 footer:'7일·14일 집계는 1월 1일부터 시작하며 마지막 구간은 다음 해 1월 1일에 끝납니다. 날짜는 Jira 계정의 시간대를 따릅니다. 결과가 0건인 기간도 표시합니다. 기간 및 생성·해결 조건별로 각각 조회합니다. 해결된 이슈에는 이전 연도에 생성된 이슈가 포함될 수 있으므로 해결/생성 비율은 같은 이슈 집단의 해결률이 아닙니다.',
 periods:{daily:'일간','1week':'주간',monthly:'월간',yearly:'연간',quarterly:'분기간'}}
 };
+messages.en.titleRatio='Cumulative Resolved-to-Created Ratio';
+messages.ko.titleRatio='프로젝트별 누적 해결율 추이';
+messages.en.noteRatio='Chart: cumulative Resolved / Created. JQL proof tables show counts for each period.';
+messages.ko.noteRatio='그래프: 누적 해결 건수 / 누적 생성 건수. JQL 증빙 표는 기간별 건수입니다.';
