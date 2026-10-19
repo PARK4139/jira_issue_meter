@@ -35,12 +35,13 @@ section.append(legend,chart,tip);container.append(section)
 }
 const renderCombined=render;
 render=function(period){
+const unresolvedMode=calcMode==='unresolved',periodic=calcMode==='periodic';
 renderCombined(period);byId('summary').replaceChildren();byId('combined-chart').hidden=true;byId('combined-table').hidden=true;
 const container=byId('project-graphs');container.replaceChildren();
 if(chartLayout==='single')renderSingleGraph(period,container);
 else for(const project of loadedProjectReports){
 const rows=project.datasets[period],section=document.createElement('section');section.className='project-report';section.setAttribute('aria-label',project.name+' ('+project.key+')');
-const periodic=calcMode==='periodic',unresolvedMode=calcMode==='unresolved',chartRows=periodic?rows:cumulativeRows(rows);
+const chartRows=periodic?rows:cumulativeRows(rows);
 const heading=document.createElement('h3');heading.textContent=project.name+' ('+project.key+')';section.append(heading);
 const summary=document.createElement('p');if(unresolvedMode){const span=document.createElement('span');span.className='blue';span.dataset.metric='unresolved';span.dataset.count=String(rows.at(-1)?.unresolved??0);span.textContent=t('unresolved')+': '+span.dataset.count;summary.append(span)}else for(const [field,label,color] of [['created','Created','red'],['resolved','Resolved','green']]){const span=document.createElement('span');span.className=color;span.dataset.metric=field;span.dataset.count=String(cumulativeTotals(rows)[field]);span.textContent=label+': '+span.dataset.count+'   ';summary.append(span)}
 section.append(summary);
