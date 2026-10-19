@@ -22,7 +22,7 @@ values.forEach((value,i)=>{if(value===null){started=false;return}pathData+=(star
 append('path',{d:pathData,stroke:color,'stroke-width':3,fill:'none',pathLength:1000,class:'series-line'});
 values.forEach((value,i)=>{if(value===null)return;const circle=append('circle',{cx:x(i,rows.length),cy:y(value),r:rows.length>60?1.5:3.5,fill:color,class:'series-dot'});circle.style.setProperty('--i',String(i));(dots[i]??=[]).push(circle)})
 });
-const endLabels=projects.map(({project,values},projectIndex)=>({project,value:values.at(-1),rawY:values.at(-1)===null?B:y(values.at(-1)),color:seriesColor(projectIndex)})).sort((a,b)=>a.rawY-b.rawY),labelTop=T+8,labelBottom=B-8,labelGap=Math.min(18,(labelBottom-labelTop)/Math.max(1,endLabels.length-1));
+const endLabels=projects.map(({project,values},projectIndex)=>({project,value:values.at(-1),rawY:values.at(-1)===null?B:y(values.at(-1)),color:seriesColor(projectIndex)})).sort((a,b)=>Number(a.value===null)-Number(b.value===null)||a.rawY-b.rawY),labelTop=T+8,labelBottom=B-8,labelGap=Math.min(18,(labelBottom-labelTop)/Math.max(1,endLabels.length-1));
 endLabels.forEach((item,index)=>{item.labelY=Math.max(labelTop,Math.min(labelBottom,item.rawY));if(index)item.labelY=Math.max(item.labelY,endLabels[index-1].labelY+labelGap)});
 if(endLabels.length)endLabels.at(-1).labelY=Math.min(labelBottom,endLabels.at(-1).labelY);
 for(let i=endLabels.length-2;i>=0;i--)endLabels[i].labelY=Math.min(endLabels[i].labelY,endLabels[i+1].labelY-labelGap);

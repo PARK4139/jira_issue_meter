@@ -203,6 +203,10 @@ async function main() {
     assert.ok(crowded.positions.every(y=>y>=48&&y<=crowded.height-93),'20 coincident endpoints stay inside the graph');
     const ordered=[...crowded.positions].sort((a,b)=>a-b);
     assert.ok(ordered.slice(1).every((y,i)=>y-ordered[i]>=17),'labels remain separated');
+    const missingRatios=await evaluate(`(()=>{const original=loadedProjectReports;try{loadedProjectReports=[['Missing A',0,0],['Zero',2,0],['Positive',2,1],['Missing B',0,1]].map(([name,created,resolved],i)=>({...original[0],key:'R'+i,name,datasets:{...original[0].datasets,[activePeriod]:original[0].datasets[activePeriod].map(row=>({...row,created,resolved}))}}));render(activePeriod);const svg=document.querySelector('.single-graph svg');return {names:[...svg.querySelectorAll('text[data-series]:not([text-anchor])')].map(n=>n.querySelector('title').textContent),values:[...svg.querySelectorAll('text[data-series][text-anchor="end"]')].map(n=>({text:n.textContent,y:Number(n.getAttribute('y'))}))}}finally{loadedProjectReports=original;render(activePeriod)}})()`);
+    assert.deepEqual(missingRatios.names,['Positive','Zero','Missing A','Missing B']);
+    assert.deepEqual(missingRatios.values.map(n=>n.text),['50.0%','0.0%','\u2014','\u2014']);
+    assert.ok(missingRatios.values.slice(1).every((n,i)=>n.y>missingRatios.values[i].y),'missing ratios appear below zero, with separated labels');
 
     // Persistence: every input is mirrored to the git-ignored file, and a restart on another port (new origin, empty localStorage) restores it.
     await waitFor(async () => { try { const saved = JSON.parse(await fs.readFile(inputsFile, 'utf8')); return saved.projects === '["HTG","OTHER"]' && JSON.parse(saved.reporters).length === 2; } catch { return false; } }, 'inputs saved to disk');
